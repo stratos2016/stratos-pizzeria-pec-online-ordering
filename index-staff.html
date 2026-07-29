@@ -250,16 +250,23 @@
     wrapper.appendChild(toppingContainer);
 
     // Find the best container — walk up to the scrollable/card parent
-    var scrollContainer = items[0].closest('.max-w-2xl')
-      || items[0].closest('[class*="max-w"]')
-      || items[0].closest('[class*="overflow-auto"]')
-      || items[0].closest('main');
+    // Find the overflow-y-auto scroll wrapper that contains the menu items
+    var scrollContainer = null;
+    var el = items[0];
+    for (var si = 0; si < 10; si++) {
+      el = el.parentElement;
+      if (!el) break;
+      var ov = getComputedStyle(el).overflowY;
+      if (ov === 'auto' || ov === 'scroll') { scrollContainer = el; break; }
+    }
     if (scrollContainer) {
       scrollContainer.appendChild(wrapper);
-    } else if (parent.parentElement) {
-      parent.parentElement.appendChild(wrapper);
     } else {
-      parent.appendChild(wrapper);
+      // Fallback: append after the divide-y container
+      var divider = items[0].closest('[class*="divide"]');
+      if (divider && divider.parentElement) {
+        divider.parentElement.insertBefore(wrapper, divider.nextSibling);
+      }
     }
 
     renderToppings(toppingContainer, false);
