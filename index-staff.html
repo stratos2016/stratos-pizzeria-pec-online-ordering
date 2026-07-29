@@ -10,7 +10,7 @@
 (function() {
   var MENU_DATA = [{"id": 1, "name": "Strato's Deluxe", "category": "Specialty Pizza", "description": "Red sauce, pepperoni, green peppers, white onions, mushrooms, ham & bacon", "price": 22, "available": true, "sortOrder": 1}, {"id": 2, "name": "Greek", "category": "Specialty Pizza", "description": "Red sauce, pepperoni, green peppers, feta, kalamata olives & tomatoes", "price": 23, "available": true, "sortOrder": 2}, {"id": 3, "name": "Cheese Lover", "category": "Specialty Pizza", "description": "Red sauce, mozzarella, cheddar, provolone & parmesan", "price": 21.5, "available": true, "sortOrder": 3}, {"id": 4, "name": "Canadian", "category": "Specialty Pizza", "description": "Red sauce, pepperoni, bacon & mushrooms", "price": 18.5, "available": true, "sortOrder": 4}, {"id": 5, "name": "B.L.T Pizza", "category": "Specialty Pizza", "description": "Olive oil base, bacon, tomato, lettuce & garlic aioli", "price": 22.75, "available": true, "sortOrder": 5}, {"id": 6, "name": "Vegetarian", "category": "Specialty Pizza", "description": "Red sauce, mushrooms, green peppers, tomatoes, green olives & white onions", "price": 22, "available": true, "sortOrder": 6}, {"id": 7, "name": "Hawaiian", "category": "Specialty Pizza", "description": "Red sauce, ham & pineapple", "price": 18.5, "available": true, "sortOrder": 7}, {"id": 8, "name": "Bacon Cheeseburger", "category": "Specialty Pizza", "description": "Red sauce, ground beef, bacon & cheddar", "price": 23.5, "available": true, "sortOrder": 8}, {"id": 9, "name": "Meat Lover", "category": "Specialty Pizza", "description": "Red sauce, pepperoni, bacon, ham & sausage", "price": 21.5, "available": true, "sortOrder": 9}, {"id": 10, "name": "Bruschetta Pizza", "category": "Specialty Pizza", "description": "Olive oil base, green peppers, red onions, tomatoes & feta", "price": 22, "available": true, "sortOrder": 10}, {"id": 11, "name": "Spinach + Feta", "category": "Specialty Pizza", "description": "Olive oil & dill base, baby spinach, feta & red onions", "price": 23, "available": true, "sortOrder": 11}, {"id": 12, "name": "Philly Chicken", "category": "Specialty Pizza", "description": "Red sauce, grilled chicken, green peppers, mushrooms & white onions", "price": 24, "available": true, "sortOrder": 12}, {"id": 13, "name": "BBQ Chicken", "category": "Specialty Pizza", "description": "BBQ sauce base, grilled chicken & red onions", "price": 24, "available": true, "sortOrder": 13}, {"id": 14, "name": "Build Your Own Pizza", "category": "Build Your Own", "description": "Start with your choice of crust, sauce & toppings", "price": 15.75, "available": true, "sortOrder": 1}, {"id": 15, "name": "Wings (1LB)", "category": "Shareables", "description": "Frank's hot, honey garlic, medium, lemon pepper, salt & pepper, or lemon honey", "price": 16, "available": true, "sortOrder": 1}, {"id": 16, "name": "Garlic Bread (4pc)", "category": "Shareables", "description": "Oven-baked garlic bread \u2014 add cheese or bacon", "price": 5, "available": true, "sortOrder": 3}, {"id": 17, "name": "Cheesy Garlic Stix (7pc)", "category": "Shareables", "description": "Mozzarella, garlic butter & parmesan served with marinara dip", "price": 16, "available": true, "sortOrder": 4}, {"id": 18, "name": "Bruschetta (4pc)", "category": "Shareables", "description": "Tomatoes, red onions, green peppers, feta & herb dressing", "price": 16, "available": true, "sortOrder": 4}, {"id": 19, "name": "Calamari (8-9pc)", "category": "Shareables", "description": "Breaded with zesty seasoning", "price": 18, "available": true, "sortOrder": 5}, {"id": 20, "name": "Spanakopita", "category": "Shareables", "description": "House-made feta & spinach stuffed filo pastry", "price": 9, "available": true, "sortOrder": 6}, {"id": 21, "name": "Dolmades (6pc)", "category": "Shareables", "description": "Vine leaves stuffed with rice, served with pita & tzatziki", "price": 13, "available": true, "sortOrder": 7}, {"id": 22, "name": "Souvlaki Skewers (2)", "category": "Shareables", "description": "Chicken or pork skewers, marinated & grilled, served with tzatziki", "price": 13, "available": true, "sortOrder": 8}, {"id": 23, "name": "Garlic Aioli Fries", "category": "Shareables", "description": "Hand-cut fries, house garlic aioli & parmesan", "price": 14, "available": true, "sortOrder": 9}, {"id": 24, "name": "Mozzarella Sticks (5pc)", "category": "Shareables", "description": "Breaded and fried, served with marinara", "price": 9, "available": true, "sortOrder": 10}, {"id": 25, "name": "Zucchini Sticks", "category": "Shareables", "description": "Breaded and fried, served with tzatziki", "price": 9, "available": true, "sortOrder": 11}, {"id": 26, "name": "Fried Pickles (5pc)", "category": "Shareables", "description": "Breaded and fried, served with ranch", "price": 9, "available": true, "sortOrder": 12}, {"id": 27, "name": "Lemon Roasted Potatoes", "category": "Shareables", "description": "Served with house tzatziki", "price": 12, "available": true, "sortOrder": 13}, {"id": 28, "name": "8oz Tzatziki Dip", "category": "Shareables", "description": "Garlic, dill, cucumber & Greek yogurt dip served with grilled pita", "price": 14, "available": true, "sortOrder": 14}, {"id": 29, "name": "Greek Salad (Sm)", "category": "Salads", "description": "Romaine, tomatoes, green peppers, cucumbers, red onions, feta, kalamata olives & house Greek dressing", "price": 10.25, "available": true, "sortOrder": 1}, {"id": 30, "name": "Greek Salad (Lg)", "category": "Salads", "description": "Romaine, tomatoes, green peppers, cucumbers, red onions, feta, kalamata olives & house Greek dressing", "price": 16.25, "available": true, "sortOrder": 2}, {"id": 31, "name": "Caesar Salad (Sm)", "category": "Salads", "description": "Romaine, bacon, house croutons, fresh parmesan & Caesar dressing", "price": 10, "available": true, "sortOrder": 3}, {"id": 32, "name": "Caesar Salad (Lg)", "category": "Salads", "description": "Romaine, bacon, house croutons, fresh parmesan & Caesar dressing", "price": 15.25, "available": true, "sortOrder": 4}, {"id": 33, "name": "Village Salad", "category": "Salads", "description": "Layered tomatoes, green peppers, cucumbers, red onions, feta, kalamata olives, pepperoncini & house Greek dressing", "price": 18.25, "available": true, "sortOrder": 5}, {"id": 34, "name": "House Burger", "category": "Big Bites", "description": "6oz locally sourced beef patty, tomato, onion, pickles, mustard, ketchup & relish on a toasted brioche bun", "price": 13.5, "available": true, "sortOrder": 1}, {"id": 35, "name": "Crispy Chicken", "category": "Big Bites", "description": "Hand-breaded chicken, shredded lettuce, tomato & mayo on a toasted milk bun", "price": 13.5, "available": true, "sortOrder": 2}, {"id": 36, "name": "Souvlaki Pita", "category": "Big Bites", "description": "Chicken or pork skewer wrapped in pita with lettuce, red onions, tomatoes & house tzatziki", "price": 13.5, "available": true, "sortOrder": 3}, {"id": 37, "name": "Gyro Pita", "category": "Big Bites", "description": "Lamb & beef, shredded lettuce, red onion, tomato & house tzatziki", "price": 13.5, "available": true, "sortOrder": 4}, {"id": 38, "name": "Souvlaki Dinner", "category": "Big Bites", "description": "1 skewer (chicken or pork), rice, lemon roasted potatoes & Greek salad", "price": 26, "available": true, "sortOrder": 5}, {"id": 39, "name": "Lasagna", "category": "Big Bites", "description": "House-made meat sauce, fresh parmesan & mozzarella", "price": 18, "available": true, "sortOrder": 6}, {"id": 40, "name": "Chicken Parmigiana", "category": "Big Bites", "description": "Hand-breaded chicken breast, mozzarella, house marinara & spaghetti", "price": 26, "available": true, "sortOrder": 7}, {"id": 41, "name": "Chicken Tenders", "category": "Big Bites", "description": "4 piece breaded chicken, hand-cut fries & plum sauce", "price": 19, "available": true, "sortOrder": 8}, {"id": 42, "name": "Hand Cut Fries", "category": "Sides", "description": "Fresh hand-cut fries \u2014 regular or seasoned (+$0.50)", "price": 4, "available": true, "sortOrder": 1}, {"id": 43, "name": "Onion Rings", "category": "Sides", "description": "Beer-battered onion rings", "price": 4.75, "available": true, "sortOrder": 2}, {"id": 44, "name": "Greek Fries", "category": "Sides", "description": "Hand-cut fries, feta, Greek salad dressing & oregano", "price": 9, "available": true, "sortOrder": 3}, {"id": 45, "name": "Poutine", "category": "Sides", "description": "Hand-cut fries, cheese curds & beef gravy", "price": 11.5, "available": true, "sortOrder": 4}, {"id": 46, "name": "Three Cheese Poutine", "category": "Sides", "description": "Fries, mozzarella, curd, cheddar & beef gravy", "price": 14, "available": true, "sortOrder": 5}, {"id": 47, "name": "Bacon Cheeseburger Poutine", "category": "Sides", "description": "Fries, bacon, cheddar, beef, cheese curd & beef gravy", "price": 15, "available": true, "sortOrder": 6}, {"id": 48, "name": "Grilled Pita", "category": "Shareables", "description": "Freshly grilled pita bread", "price": 1.5, "available": true, "sortOrder": 15}, {"id": 49, "name": "House Tzatziki", "category": "Dips", "description": "Garlic, dill, cucumber & Greek yogurt", "price": 3.25, "available": true, "sortOrder": 1}, {"id": 50, "name": "House Spicy Aioli", "category": "Dips", "description": "House-made spicy aioli", "price": 3.25, "available": true, "sortOrder": 2}, {"id": 51, "name": "House Aioli", "category": "Dips", "description": "House-made garlic aioli", "price": 3.25, "available": true, "sortOrder": 3}, {"id": 52, "name": "House Marinara", "category": "Dips", "description": "House tomato marinara sauce", "price": 2, "available": true, "sortOrder": 4}, {"id": 53, "name": "Creamy Garlic", "category": "Dips", "description": "Creamy garlic dipping sauce", "price": 1.75, "available": true, "sortOrder": 5}, {"id": 54, "name": "Ranch", "category": "Dips", "description": "Buttermilk ranch dressing", "price": 2, "available": true, "sortOrder": 6}, {"id": 55, "name": "Caesar", "category": "Dips", "description": "House Caesar dressing", "price": 2, "available": true, "sortOrder": 7}, {"id": 56, "name": "Frank's Hot", "category": "Dips", "description": "Frank's RedHot sauce", "price": 2, "available": true, "sortOrder": 8}, {"id": 57, "name": "BBQ", "category": "Dips", "description": "Smoky BBQ sauce", "price": 2, "available": true, "sortOrder": 9}, {"id": 58, "name": "Wings (2LB)", "category": "Shareables", "description": "Frank's hot, honey garlic, medium, lemon pepper, salt & pepper, or lemon honey", "price": 31, "available": true, "sortOrder": 2}];
   var ORDERS = [];
-  var SETTINGS = [{"key": "restaurant_name", "value": "Strato's Pizzeria"}, {"key": "clover_merchant_id", "value": ""}, {"key": "clover_api_key", "value": ""}, {"key": "clover_environment", "value": "sandbox"}, {"key": "tax_rate", "value": "13"}, {"key": "printer_enabled", "value": "false"}, {"key": "deliveryTime", "value": "45"}];
+  var SETTINGS = [{"key":"restaurant_name","value":"Strato's Pizzeria"},{"key":"clover_merchant_id","value":""},{"key":"clover_api_key","value":""},{"key":"clover_environment","value":"sandbox"},{"key":"tax_rate","value":"13"},{"key":"printer_enabled","value":"false"},{"key":"deliveryTime","value":"45"}];
   var origFetch = window.fetch;
   window.fetch = function(url, opts) {
     var urlStr = typeof url === 'string' ? url : (url && url.url) || '';
@@ -22,6 +22,13 @@
       var body = (opts && opts.body) ? JSON.parse(opts.body) : {};
       var item = MENU_DATA.find(function(i) { return i.id === id; });
       if (item) item.available = body.available;
+      return Promise.resolve(new Response(JSON.stringify(item||{}), {status:200,headers:{'Content-Type':'application/json'}}));
+    }
+    if (path.match(/^\/api\/menu\/\d+\/price/) && method === 'PATCH') {
+      var id = parseInt(path.split('/')[3]);
+      var body = (opts && opts.body) ? JSON.parse(opts.body) : {};
+      var item = MENU_DATA.find(function(i) { return i.id === id; });
+      if (item) item.price = parseFloat(body.price);
       return Promise.resolve(new Response(JSON.stringify(item||{}), {status:200,headers:{'Content-Type':'application/json'}}));
     }
     if (path === '/api/orders' && method === 'GET') return Promise.resolve(new Response(JSON.stringify(ORDERS), {status:200,headers:{'Content-Type':'application/json'}}));
@@ -53,6 +60,188 @@
     if (path === '/api/tables' && method === 'GET') return Promise.resolve(new Response('[]', {status:200,headers:{'Content-Type':'application/json'}}));
     return origFetch.apply(this, arguments);
   };
+})();
+</script>
+    <script>
+(function() {
+  window.__TOPPINGS__ = [{"name": "Pepperoni", "priceKey": "Meat", "group": "Meats", "available": true}, {"name": "Ham", "priceKey": "Meat", "group": "Meats", "available": true}, {"name": "Bacon", "priceKey": "Meat", "group": "Meats", "available": true}, {"name": "Sausage", "priceKey": "Meat", "group": "Meats", "available": true}, {"name": "Ground Beef", "priceKey": "Meat", "group": "Meats", "available": true}, {"name": "Grilled Chicken", "priceKey": "Chicken", "group": "Meats", "available": true}, {"name": "Mushrooms", "priceKey": "Veggie", "group": "Veggies", "available": true}, {"name": "Green Peppers", "priceKey": "Veggie", "group": "Veggies", "available": true}, {"name": "Red Onions", "priceKey": "Veggie", "group": "Veggies", "available": true}, {"name": "White Onions", "priceKey": "Veggie", "group": "Veggies", "available": true}, {"name": "Tomatoes", "priceKey": "Veggie", "group": "Veggies", "available": true}, {"name": "Baby Spinach", "priceKey": "Veggie", "group": "Veggies", "available": true}, {"name": "Green Olives", "priceKey": "Veggie", "group": "Veggies", "available": true}, {"name": "Pineapple", "priceKey": "Veggie", "group": "Veggies", "available": true}, {"name": "Hot Banana Peppers", "priceKey": "Veggie", "group": "Veggies", "available": true}, {"name": "Dill Pickles", "priceKey": "Veggie", "group": "Veggies", "available": true}, {"name": "Feta", "priceKey": "Premium", "group": "Premium", "available": true}, {"name": "Kalamata Olives", "priceKey": "Premium", "group": "Premium", "available": true}, {"name": "Cheddar", "priceKey": "Premium", "group": "Premium", "available": true}, {"name": "Provolone", "priceKey": "Premium", "group": "Premium", "available": true}, {"name": "Parmesan", "priceKey": "Premium", "group": "Premium", "available": true}, {"name": "Goat Cheese", "priceKey": "Premium", "group": "Premium", "available": true}, {"name": "Chorizo", "priceKey": "Premium", "group": "Premium", "available": true}, {"name": "Gyro Meat", "priceKey": "Premium", "group": "Premium", "available": true}, {"name": "Anchovies", "priceKey": "Premium", "group": "Premium", "available": true}, {"name": "Fresh Garlic", "priceKey": "Premium", "group": "Premium", "available": true}, {"name": "Basil", "priceKey": "Premium", "group": "Premium", "available": true}, {"name": "Garlic Aioli", "priceKey": "Premium", "group": "Drizzle", "available": true}];
+  window.__TOPPING_PRICES__ = {"Veggie": {"SM": 1.25, "GF Small": 1.25, "MED": 1.75, "LRG": 2.25, "XL": 3.0}, "Meat": {"SM": 1.25, "GF Small": 1.25, "MED": 1.75, "LRG": 2.25, "XL": 3.0}, "Premium": {"SM": 1.95, "GF Small": 1.95, "MED": 2.5, "LRG": 3.25, "XL": 4.5}, "Chicken": {"SM": 3.75, "GF Small": 3.75, "MED": 6.75, "LRG": 7.25, "XL": 8.75}};
+  var ADMIN_PIN = '2016';
+
+  function renderToppings(container, pinUnlocked) {
+    var toppings = window.__TOPPINGS__ || [];
+    var prices = window.__TOPPING_PRICES__ || {};
+    var isDark = document.documentElement.classList.contains('dark');
+    var bg = isDark ? '#1a1a1a' : '#ffffff';
+    var border = isDark ? '#2a2a2a' : '#e5e7eb';
+    var text = isDark ? '#f5f5f5' : '#111827';
+    var muted = isDark ? '#888' : '#6b7280';
+    var mutedBg = isDark ? '#111' : '#f9fafb';
+
+    var html = '<div style="border-top:2px solid '+border+'">'
+      + '<div style="padding:8px 20px;background:'+mutedBg+';border-bottom:1px solid '+border+'">'
+      + '<p style="font-size:11px;font-weight:600;color:'+muted+';text-transform:uppercase;letter-spacing:0.05em;margin:0">Pizza Toppings</p>'
+      + '</div>';
+
+    toppings.forEach(function(tp) {
+      var avail = tp.available !== false;
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-bottom:1px solid '+border+'">'
+        + '<div>'
+        + '<p style="margin:0;font-size:14px;font-weight:500;color:'+text+';'+(avail?'':'text-decoration:line-through;opacity:0.5')+'">'
+        + tp.name + '</p>'
+        + '<p style="margin:0;font-size:11px;color:'+muted+'">' + tp.priceKey + ' tier</p>'
+        + '</div>'
+        + '<div style="display:flex;align-items:center;gap:8px">'
+        + (!avail ? '<span style="font-size:11px;color:#dc2626;border:1px solid #fca5a5;border-radius:4px;padding:1px 6px">86\'d</span>' : '')
+        + '<label style="position:relative;display:inline-block;width:36px;height:20px">'
+        + '<input type="checkbox" data-topping="'+tp.name+'" '+(avail?'checked':'')+' '
+        + 'style="opacity:0;width:0;height:0;position:absolute">'
+        + '<span style="position:absolute;cursor:pointer;inset:0;background:'+(avail?'#c09b6d':'#ccc')+';border-radius:20px;transition:0.2s">'
+        + '<span style="position:absolute;content:\'\';height:14px;width:14px;left:'+(avail?'19':'3')+'px;bottom:3px;background:white;border-radius:50%;transition:0.2s"></span>'
+        + '</span></label>'
+        + '</div></div>';
+    });
+
+    // Tier price editor (PIN gated)
+    if (pinUnlocked) {
+      html += '<div style="padding:16px 20px;border-top:1px solid #fcd34d;background:'+(isDark?'rgba(120,53,15,0.1)':'rgba(255,251,235,0.8)')+'">'
+        + '<p style="font-size:11px;font-weight:600;color:'+muted+';text-transform:uppercase;letter-spacing:0.05em;margin:0 0 12px">Topping Price Tiers (per size)</p>';
+      ['Veggie','Meat','Premium','Chicken'].forEach(function(tier) {
+        var tp = prices[tier] || {};
+        html += '<div style="margin-bottom:12px">'
+          + '<p style="font-size:12px;font-weight:600;color:'+text+';margin:0 0 6px">'+tier+'</p>'
+          + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">';
+        ['SM','MED','LRG','XL'].forEach(function(sz) {
+          html += '<div style="display:flex;flex-direction:column;gap:2px;align-items:center">'
+            + '<span style="font-size:11px;color:'+muted+';text-align:center">'+sz+'</span>'
+            + '<div style="display:flex;align-items:center">'
+            + '<span style="font-size:11px;color:'+muted+'">$</span>'
+            + '<input type="number" step="0.01" min="0" value="'+((tp[sz]||0).toFixed(2))+'" '
+            + 'data-tier="'+tier+'" data-size="'+sz+'" '
+            + 'style="width:52px;font-size:11px;border:1px solid '+border+';border-radius:4px;padding:2px 4px;background:'+bg+';color:'+text+';text-align:right">'
+            + '</div></div>';
+        });
+        html += '</div></div>';
+      });
+      html += '</div>';
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
+
+    // Wire up topping toggles
+    container.querySelectorAll('input[data-topping]').forEach(function(inp) {
+      inp.addEventListener('change', function() {
+        var name = inp.getAttribute('data-topping');
+        var tp = (window.__TOPPINGS__||[]).find(function(t){return t.name===name;});
+        if (tp) tp.available = inp.checked;
+        // Re-render
+        renderToppings(container, pinUnlocked);
+      });
+    });
+
+    // Wire up tier price inputs
+    container.querySelectorAll('input[data-tier]').forEach(function(inp) {
+      inp.addEventListener('blur', function() {
+        var tier = inp.getAttribute('data-tier');
+        var sz   = inp.getAttribute('data-size');
+        var v    = parseFloat(inp.value);
+        if (!isNaN(v) && v >= 0) {
+          if (!window.__TOPPING_PRICES__) window.__TOPPING_PRICES__ = {};
+          if (!window.__TOPPING_PRICES__[tier]) window.__TOPPING_PRICES__[tier] = {};
+          window.__TOPPING_PRICES__[tier][sz] = v;
+        }
+      });
+    });
+  }
+
+  function injectToppings() {
+    // Find the Menu tab content container — look for avail-item elements
+    var items = document.querySelectorAll('[data-testid^="avail-item"]');
+    if (!items.length) return;
+
+    var existing = document.getElementById('__toppings_section__');
+    if (existing) return; // Already injected
+
+    // Find the scrollable container
+    var parent = items[items.length-1].closest('[class*="divide"]');
+    if (!parent) parent = items[0].parentElement;
+
+    var wrapper = document.createElement('div');
+    wrapper.id = '__toppings_section__';
+    wrapper.style.cssText = 'margin-top:16px;border-radius:12px;overflow:hidden;border:1px solid '+(document.documentElement.classList.contains('dark')?'#2a2a2a':'#e5e7eb');
+
+    // PIN bar
+    var pinBar = document.createElement('div');
+    var isDark = document.documentElement.classList.contains('dark');
+    var pinUnlocked = false;
+    pinBar.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 20px;border-bottom:1px solid '+(isDark?'#2a2a2a':'#e5e7eb')+';background:'+(isDark?'#111':'#f9fafb');
+    pinBar.innerHTML = '<span style="font-size:12px;color:#888;white-space:nowrap">Manager PIN:</span>'
+      + '<input id="__pin_input__" type="password" maxlength="8" placeholder="••••" style="width:64px;font-size:12px;border:1px solid #ccc;border-radius:4px;padding:3px 6px;background:'+(isDark?'#1a1a1a':'#fff')+';color:'+(isDark?'#fff':'#000')+'">'
+      + '<button id="__pin_btn__" style="font-size:12px;padding:3px 12px;background:#c09b6d;color:#0d1b34;border:none;border-radius:4px;cursor:pointer;font-weight:600">Unlock</button>'
+      + '<span id="__pin_err__" style="font-size:11px;color:#dc2626;display:none">Incorrect PIN</span>';
+
+    var toppingContainer = document.createElement('div');
+
+    wrapper.appendChild(pinBar);
+    wrapper.appendChild(toppingContainer);
+
+    // Find the best container — walk up to the scrollable/card parent
+    var scrollContainer = items[0].closest('.max-w-2xl')
+      || items[0].closest('[class*="max-w"]')
+      || items[0].closest('[class*="overflow-auto"]')
+      || items[0].closest('main');
+    if (scrollContainer) {
+      scrollContainer.appendChild(wrapper);
+    } else if (parent.parentElement) {
+      parent.parentElement.appendChild(wrapper);
+    } else {
+      parent.appendChild(wrapper);
+    }
+
+    renderToppings(toppingContainer, false);
+
+    function handleUnlock() {
+      var val = document.getElementById('__pin_input__').value;
+      if (val === ADMIN_PIN) {
+        pinUnlocked = true;
+        document.getElementById('__pin_input__').style.display = 'none';
+        document.getElementById('__pin_btn__').textContent = 'Lock';
+        document.getElementById('__pin_btn__').style.background = '#555';
+        document.getElementById('__pin_err__').style.display = 'none';
+        renderToppings(toppingContainer, true);
+        document.getElementById('__pin_btn__').removeEventListener('click', arguments.callee);
+        document.getElementById('__pin_btn__').addEventListener('click', function() {
+          pinUnlocked = false;
+          // Re-show PIN input, reset button
+          document.getElementById('__pin_input__').value = '';
+          document.getElementById('__pin_input__').style.display = 'inline-block';
+          document.getElementById('__pin_btn__').textContent = 'Unlock';
+          document.getElementById('__pin_btn__').style.background = '#c09b6d';
+          renderToppings(toppingContainer, false);
+          // Re-wire unlock button
+          document.getElementById('__pin_btn__').removeEventListener('click', arguments.callee);
+          document.getElementById('__pin_btn__').addEventListener('click', handleUnlock);
+        });
+      } else {
+        document.getElementById('__pin_err__').style.display = 'inline';
+        document.getElementById('__pin_input__').value = '';
+      }
+    }
+    document.getElementById('__pin_btn__').addEventListener('click', handleUnlock);
+  }
+
+  // Poll for the menu tab being active
+  var interval = setInterval(function() {
+    var items = document.querySelectorAll('[data-testid^="avail-item"]');
+    if (items.length > 0) {
+      injectToppings();
+    } else {
+      // Menu tab not active — remove injected section so it re-injects when shown
+      var ex = document.getElementById('__toppings_section__');
+      if (ex) ex.remove();
+    }
+  }, 500);
 })();
 </script>
     <script type="module" crossorigin src="./assets/staff-C0_JW9rY.js"></script>
