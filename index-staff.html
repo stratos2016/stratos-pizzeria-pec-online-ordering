@@ -237,26 +237,34 @@
   var addItemPinUnlocked = false;
 
   function injectAddItemForm() {
+    // Use a fixed overlay bar that doesn't affect DOM layout at all
     var existing = document.getElementById('__add_item_bar__');
-    if (existing) { existing.style.display = ''; return; }
-    var avItems = document.querySelectorAll('[data-testid^="avail-item"]');
-    if (!avItems.length) return;
+    var onMenuTab = document.querySelectorAll('[data-testid^="avail-item"]').length > 0;
+
+    if (!onMenuTab) {
+      if (existing) existing.style.display = 'none';
+      return;
+    }
+
+    if (existing) {
+      existing.style.display = 'flex';
+      return;
+    }
 
     var isDark = document.documentElement.classList.contains('dark');
     var bg     = isDark ? '#1a1a1a' : '#ffffff';
     var border = isDark ? '#2a2a2a' : '#e5e7eb';
     var text   = isDark ? '#f5f5f5' : '#111827';
     var muted  = isDark ? '#888'    : '#6b7280';
-    var mutedBg= isDark ? '#111'    : '#f9fafb';
-
-    // Find the scrollable content container — the direct parent of the menu sections
-    var divideContainer = avItems[0].closest('[class*="divide"]') || avItems[0].parentElement;
-    var menuContainer = divideContainer ? divideContainer.parentElement : document.querySelector('main');
-    if (!menuContainer) return;
+    var mutedBg= isDark ? 'rgba(17,17,17,0.97)' : 'rgba(249,250,251,0.97)';
 
     var bar = document.createElement('div');
     bar.id = '__add_item_bar__';
-    bar.style.cssText = 'padding:10px 20px;border-bottom:1px solid '+border+';background:'+mutedBg+';display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:10;';
+    // Fixed at bottom of screen — avoids any layout interference
+    bar.style.cssText = 'position:fixed;bottom:0;left:220px;right:0;z-index:9999;'
+      + 'padding:10px 20px;border-top:1px solid '+border+';background:'+mutedBg+';'
+      + 'display:flex;align-items:center;gap:10px;flex-wrap:wrap;'
+      + 'backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);';
 
     if (!addItemPinUnlocked) {
       bar.innerHTML = '<span style="font-size:12px;color:'+muted+';white-space:nowrap">Manager PIN to add items:</span>'
@@ -269,11 +277,10 @@
         + '<button id="__add_lock_btn__" style="font-size:11px;padding:4px 10px;background:transparent;color:'+muted+';border:1px solid '+border+';border-radius:6px;cursor:pointer">Lock</button>';
     }
 
-    // Insert before the divide container, inside its scroll parent
-    menuContainer.insertBefore(bar, divideContainer || menuContainer.firstChild);
+    document.body.appendChild(bar);
 
     if (!addItemPinUnlocked) {
-      document.getElementById('__add_pin_btn__').addEventListener('click', function() {
+      function handleAddPin() {
         if (document.getElementById('__add_pin_input__').value === '2016') {
           addItemPinUnlocked = true;
           bar.remove();
@@ -282,9 +289,10 @@
           document.getElementById('__add_pin_err__').style.display = 'inline';
           document.getElementById('__add_pin_input__').value = '';
         }
-      });
+      }
+      document.getElementById('__add_pin_btn__').addEventListener('click', handleAddPin);
       document.getElementById('__add_pin_input__').addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') document.getElementById('__add_pin_btn__').click();
+        if (e.key === 'Enter') handleAddPin();
       });
     } else {
       document.getElementById('__add_item_btn__').addEventListener('click', function() {
