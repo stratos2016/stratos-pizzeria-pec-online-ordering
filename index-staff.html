@@ -237,7 +237,8 @@
   var addItemPinUnlocked = false;
 
   function injectAddItemForm() {
-    if (document.getElementById('__add_item_bar__')) return;
+    var existing = document.getElementById('__add_item_bar__');
+    if (existing) { existing.style.display = ''; return; }
     var avItems = document.querySelectorAll('[data-testid^="avail-item"]');
     if (!avItems.length) return;
 
@@ -416,8 +417,9 @@
       // Menu tab not active — remove injected sections so they re-inject when shown
       var ex = document.getElementById('__toppings_section__');
       if (ex) ex.remove();
+      // Don't remove __add_item_bar__ — just hide it when off menu tab
       var exb = document.getElementById('__add_item_bar__');
-      if (exb) exb.remove();
+      if (exb) exb.style.display = 'none';
     }
   }, 500);
 })();
