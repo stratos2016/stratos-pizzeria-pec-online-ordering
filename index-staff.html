@@ -37,7 +37,7 @@
       ORDERS.unshift(order);
       return Promise.resolve(new Response(JSON.stringify(order), {status:201,headers:{'Content-Type':'application/json'}}));
     }
-    if (path.match(/^\/api\/orders\/\d+$/) && method === 'PATCH') {
+    if ((path.match(/^\/api\/orders\/\d+$/) || path.match(/^\/api\/orders\/\d+\/status/)) && method === 'PATCH') {
       var id = parseInt(path.split('/')[3]);
       var body = (opts && opts.body) ? JSON.parse(opts.body) : {};
       var order = ORDERS.find(function(o) { return o.id === id; });
