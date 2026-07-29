@@ -249,13 +249,14 @@
     var muted  = isDark ? '#888'    : '#6b7280';
     var mutedBg= isDark ? '#111'    : '#f9fafb';
 
-    // Find the container — scroll up to the top-level wrapper of the menu list
-    var menuContainer = avItems[0].closest('main') || avItems[0].closest('[class*="overflow"]') || document.querySelector('main');
+    // Find the scrollable content container — the direct parent of the menu sections
+    var divideContainer = avItems[0].closest('[class*="divide"]') || avItems[0].parentElement;
+    var menuContainer = divideContainer ? divideContainer.parentElement : document.querySelector('main');
     if (!menuContainer) return;
 
     var bar = document.createElement('div');
     bar.id = '__add_item_bar__';
-    bar.style.cssText = 'padding:10px 20px;border-bottom:1px solid '+border+';background:'+mutedBg+';display:flex;align-items:center;gap:10px;flex-wrap:wrap;';
+    bar.style.cssText = 'padding:10px 20px;border-bottom:1px solid '+border+';background:'+mutedBg+';display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:10;';
 
     if (!addItemPinUnlocked) {
       bar.innerHTML = '<span style="font-size:12px;color:'+muted+';white-space:nowrap">Manager PIN to add items:</span>'
@@ -268,9 +269,8 @@
         + '<button id="__add_lock_btn__" style="font-size:11px;padding:4px 10px;background:transparent;color:'+muted+';border:1px solid '+border+';border-radius:6px;cursor:pointer">Lock</button>';
     }
 
-    // Insert at top of menu content
-    var firstChild = menuContainer.firstChild;
-    menuContainer.insertBefore(bar, firstChild);
+    // Insert before the divide container, inside its scroll parent
+    menuContainer.insertBefore(bar, divideContainer || menuContainer.firstChild);
 
     if (!addItemPinUnlocked) {
       document.getElementById('__add_pin_btn__').addEventListener('click', function() {
