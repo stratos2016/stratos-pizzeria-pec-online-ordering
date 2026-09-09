@@ -179,12 +179,12 @@ function Lr(){
     });
   }
 
-  const dollarVal=cust?((cust.points/100)*5).toFixed(2):"0.00";
+  const dollarVal=cust?((cust.points/1000)*2.5).toFixed(2):"0.00";
 
   return e.jsxs("div",{className:"p-4 max-w-lg mx-auto space-y-4",children:[
     e.jsxs("div",{className:"flex items-center justify-between",children:[
       e.jsx("h2",{className:"font-serif font-semibold text-lg",children:"Loyalty Points"}),
-      e.jsx("span",{className:"text-xs text-muted-foreground",children:"100 pts = $5.00"})
+      e.jsx("span",{className:"text-xs text-muted-foreground",children:"1,000 pts = $2.50"})
     ]}),
 
     /* Search bar */
@@ -225,11 +225,11 @@ function Lr(){
       e.jsxs("div",{children:[
         e.jsxs("div",{className:"flex justify-between text-xs text-muted-foreground mb-1",children:[
           e.jsx("span",{children:"Progress to next $5 reward"}),
-          e.jsxs("span",{children:[(cust.points%100)+"/100 pts"]})
+          e.jsxs("span",{children:[(cust.points%1000)+"/1000 pts"]})
         ]}),
         e.jsx("div",{className:"h-2 bg-muted rounded-full overflow-hidden",children:
           e.jsx("div",{className:"h-full bg-primary rounded-full transition-all",
-            style:{width:Math.min(100,(cust.points%100))+"%"}})
+            style:{width:Math.min(100,(cust.points%1000)/10)+"%"}})
         })
       ]}),
 
@@ -264,22 +264,22 @@ function Lr(){
 
       /* Redeem tab */
       tab==="redeem"&&e.jsxs("div",{className:"space-y-2",children:[
-        cust.points<100&&e.jsx("p",{className:"text-xs text-muted-foreground text-center py-2",
-          children:"Customer needs at least 100 pts to redeem."}),
+        cust.points<1000&&e.jsx("p",{className:"text-xs text-muted-foreground text-center py-2",
+          children:"Customer needs at least 1,000 pts to redeem."}),
         cust.points>=100&&e.jsxs(o.Fragment,{children:[
           e.jsxs("p",{className:"text-xs text-muted-foreground",children:[
-            "Available: ",Math.floor(cust.points/100)," reward(s) worth $",
-            (Math.floor(cust.points/100)*5).toFixed(2)
+            "Available: ",Math.floor(cust.points/1000)," reward(s) worth $",
+            (Math.floor(cust.points/1000)*2.5).toFixed(2)
           ]}),
           e.jsxs("div",{className:"flex gap-2 flex-wrap",children:[
-            [100,200,300].filter(v=>v<=cust.points).map(v=>
+            [1000,2000,3000].filter(v=>v<=cust.points).map(v=>
               e.jsxs("button",{onClick:()=>setRedeemAmt(String(v)),
                 className:"flex-1 py-2 border-2 "+(redeemAmt==v?"border-primary bg-primary/10":"border-border")+" rounded-lg text-sm font-medium",
-                children:[v+" pts = $",(v/100*5).toFixed(2)+" off"]},v))
+                children:[v+" pts = $",(v/1000*2.5).toFixed(2)+" off"]},v))
           ]}),
           redeemAmt&&e.jsxs("button",{onClick:redeemPoints,
             className:"w-full py-2 bg-green-600 text-white text-sm font-semibold rounded-lg",
-            children:["Redeem "+redeemAmt+" pts ($"+(parseInt(redeemAmt)/100*5).toFixed(2)+" off)"]})
+            children:["Redeem "+redeemAmt+" pts ($"+(parseInt(redeemAmt)/1000*2.5).toFixed(2)+" off)"]})
         ]})
       ]}),
 
@@ -302,8 +302,8 @@ function Lr(){
     /* Info box */
     !cust&&!notFound&&e.jsxs("div",{className:"rounded-xl border border-border p-4 space-y-2 text-sm text-muted-foreground",children:[
       e.jsx("p",{className:"font-medium text-foreground",children:"How points work"}),
-      e.jsx("p",{children:"• 1 point per $1 spent"}),
-      e.jsx("p",{children:"• 100 points = $5.00 off"}),
+      e.jsx("p",{children:"• 10 points per $1 spent"}),
+      e.jsx("p",{children:"• 1,000 points = $2.50 off"}),
       e.jsx("p",{children:"• Search by phone to look up or enroll a customer"})
     ]})
   ]});
