@@ -263,7 +263,7 @@ function Lr(){
       ]}),
 
       /* Redeem tab */
-      tab==="redeem"&&e.jsxs("div",{className:"space-y-2",children:[
+      tab==="redeem"&&e.jsxs("div",{className:"space-y-2",children:[e.jsx("p",{className:"text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2",children:"Points apply to food subtotal only — cannot be used against taxes or delivery fees."}),
         cust.points<1000&&e.jsx("p",{className:"text-xs text-muted-foreground text-center py-2",
           children:"Customer needs at least 1,000 pts to redeem."}),
         cust.points>=100&&e.jsxs(o.Fragment,{children:[
@@ -303,7 +303,7 @@ function Lr(){
     !cust&&!notFound&&e.jsxs("div",{className:"rounded-xl border border-border p-4 space-y-2 text-sm text-muted-foreground",children:[
       e.jsx("p",{className:"font-medium text-foreground",children:"How points work"}),
       e.jsx("p",{children:"• 10 points per $1 spent"}),
-      e.jsx("p",{children:"• 1,000 points = $2.50 off"}),
+      e.jsx("p",{children:"• 1,000 points = $2.50 off food subtotal"}),e.jsx("p",{children:"• Cannot apply to taxes or delivery fees"}),
       e.jsx("p",{children:"• Search by phone to look up or enroll a customer"})
     ]})
   ]});
