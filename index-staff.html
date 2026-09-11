@@ -532,6 +532,65 @@
     <script type="module" crossorigin src="./assets/staff-C0_JW9rY.js"></script>
     <link rel="modulepreload" crossorigin href="./assets/index-CVKFgV60.js">
     <link rel="stylesheet" crossorigin href="./assets/index-DsjFvvC_.css">
-  </head>
+  <script>
+(function() {
+  window.__showSmsNotification__ = function(order, readyTime, mins) {
+    var name    = order.customerName || 'Customer';
+    var phone   = order.customerPhone || order.phone || '';
+    var orderNo = order.orderNumber || ('#' + order.id);
+    var isDelivery = order.type === 'delivery' || order.orderType === 'delivery';
+    var timeLabel = isDelivery ? 'Estimated delivery: ' + readyTime : 'Ready for pickup at: ' + readyTime;
+    var msg = 'Hi ' + name + ', your order ' + orderNo + " from Strato's Pizzeria has been accepted! "
+      + timeLabel + '. Questions? Call us at (613) 394-3000.';
+
+    // Log what would be sent
+    console.log('[SMS TO ' + phone + ']:', msg);
+
+    // Show on-screen notification
+    var isDark = document.documentElement.classList.contains('dark');
+    var toast = document.createElement('div');
+    toast.style.cssText = [
+      'position:fixed',
+      'bottom:80px',
+      'left:50%',
+      'transform:translateX(-50%)',
+      'z-index:999999',
+      'background:' + (isDark ? '#1a2a1a' : '#f0fdf4'),
+      'border:1px solid #22c55e',
+      'border-radius:12px',
+      'padding:14px 18px',
+      'max-width:420px',
+      'width:calc(100% - 40px)',
+      'box-shadow:0 8px 30px rgba(0,0,0,0.2)',
+      'font-family:sans-serif',
+    ].join(';');
+
+    toast.innerHTML = [
+      '<div style="display:flex;align-items:flex-start;gap:12px">',
+        '<div style="font-size:20px;line-height:1">📱</div>',
+        '<div style="flex:1">',
+          '<p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:0.05em">',
+            'SMS Notification' + (phone ? ' → ' + phone : '') + ' (simulated)',
+          '</p>',
+          '<p style="margin:0;font-size:13px;color:' + (isDark ? '#d1fae5' : '#166534') + ';line-height:1.4">',
+            msg.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'),
+          '</p>',
+        '</div>',
+        '<button onclick="this.closest('div[id]').remove()" ',
+          'style="background:none;border:none;cursor:pointer;color:#888;font-size:16px;padding:0;line-height:1">✕</button>',
+      '</div>'
+    ].join('');
+
+    // Give the outer div an id so the close button works
+    toast.id = '__sms_toast_' + Date.now() + '__';
+    // Fix close button to reference correct element
+    toast.querySelector('button').onclick = function() { toast.remove(); };
+
+    document.body.appendChild(toast);
+    setTimeout(function() { if (toast.parentNode) toast.remove(); }, 8000);
+  };
+})();
+</script>
+</head>
   <body><div id="root"></div></body>
 </html>
