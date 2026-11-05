@@ -228,6 +228,13 @@
       return Promise.resolve(new Response(JSON.stringify(order), {status:201,headers:{'Content-Type':'application/json'}}));
     }
 
+    if (path.match(/^\/api\/orders\/\d+$/) && method === 'DELETE') {
+      var delId = parseInt(path.split('/')[3]);
+      saveOrders(getOrders().filter(function(o){ return o.id !== delId; }));
+      broadcast({type:'order_deleted', id:delId});
+      return Promise.resolve(new Response(JSON.stringify({ok:true}), {status:200,headers:{'Content-Type':'application/json'}}));
+    }
+
     if ((path.match(/^\/api\/orders\/\d+$/) || path.match(/^\/api\/orders\/\d+\/status/)) && method === 'PATCH') {
       var id = parseInt(path.split('/')[3]);
       var body = (opts && opts.body) ? JSON.parse(opts.body) : {};
@@ -909,6 +916,54 @@
     };
   }
   window.__renderDeliveryAdmin__ = function(root){ render(root); };
+})();
+</script>
+<script>
+(function(){
+  var PIN = '2016';
+  function el(html){ var d = document.createElement('div'); d.innerHTML = html; return d.firstElementChild; }
+  function refresh(){ try { window.__qc__ && window.__qc__.invalidateQueries({queryKey:['/api/orders']}); window.__qc__ && window.__qc__.invalidateQueries({queryKey:['/api/stats']}); } catch(e) {} }
+  function toast(msg){ var t = document.createElement('div'); t.textContent = msg; t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:1000001;font-family:sans-serif'; document.body.appendChild(t); setTimeout(function(){ t.remove(); }, 2200); }
+  function label(o){ return 'Order #' + (o.orderNumber || o.id) + (o.customerName ? ' \u2014 ' + o.customerName : ''); }
+  function askPin(opts, cb){
+    var dark = document.documentElement.classList.contains('dark');
+    var bg = dark ? '#1a1a1a' : '#fff', fg = dark ? '#f5f5f5' : '#111827', mu = dark ? '#9ca3af' : '#6b7280', bd = dark ? '#333' : '#e5e7eb';
+    var m = el('<div style="position:fixed;inset:0;z-index:1000000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;font-family:Inter,system-ui,sans-serif">'
+      + '<div style="background:' + bg + ';color:' + fg + ';border-radius:14px;padding:20px;width:100%;max-width:340px;box-shadow:0 10px 40px rgba(0,0,0,.3)">'
+      + '<p style="margin:0 0 4px;font-size:17px;font-weight:700">' + opts.title + '</p>'
+      + '<p style="margin:0 0 14px;font-size:13px;color:' + mu + '">' + opts.sub + '</p>'
+      + (opts.reason ? '<label style="font-size:12px;font-weight:600">Reason (optional)</label><input id="__oa_reason" maxlength="120" placeholder="e.g. Customer cancelled" style="display:block;width:100%;box-sizing:border-box;margin:4px 0 12px;padding:9px 10px;border:1px solid ' + bd + ';border-radius:8px;background:transparent;color:' + fg + ';font-size:14px">' : '')
+      + '<label style="font-size:12px;font-weight:600">Manager PIN</label><input id="__oa_pin" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="\u2022\u2022\u2022\u2022" style="display:block;width:100%;box-sizing:border-box;margin:4px 0 6px;padding:9px 10px;border:1px solid ' + bd + ';border-radius:8px;background:transparent;color:' + fg + ';font-size:16px;letter-spacing:4px">'
+      + '<p id="__oa_err" style="display:none;margin:0 0 6px;color:#dc2626;font-size:12px">Incorrect PIN</p>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">'
+      + '<button id="__oa_cancel" style="padding:10px;border-radius:8px;border:1px solid ' + bd + ';background:transparent;color:' + fg + ';font-size:14px;font-weight:600;cursor:pointer">Cancel</button>'
+      + '<button id="__oa_ok" style="padding:10px;border-radius:8px;border:none;background:#dc2626;color:#fff;font-size:14px;font-weight:600;cursor:pointer">' + opts.ok + '</button>'
+      + '</div></div></div>');
+    document.body.appendChild(m);
+    var pin = m.querySelector('#__oa_pin'); setTimeout(function(){ (m.querySelector('#__oa_reason') || pin).focus(); }, 50);
+    function close(){ m.remove(); }
+    function go(){
+      if (pin.value !== PIN) { m.querySelector('#__oa_err').style.display = 'block'; pin.value = ''; pin.focus(); return; }
+      var r = m.querySelector('#__oa_reason'); close(); cb(r ? r.value.trim() : '');
+    }
+    m.querySelector('#__oa_cancel').onclick = close;
+    m.querySelector('#__oa_ok').onclick = go;
+    pin.onkeydown = function(e){ if (e.key === 'Enter') go(); };
+    m.onclick = function(e){ if (e.target === m) close(); };
+  }
+  window.__voidOrder__ = function(o){
+    if (!o || o.status === 'voided') return;
+    askPin({title:'Void order?', sub: label(o) + '. It will move to History marked Voided and won\u2019t count in revenue.', ok:'Void Order', reason:true}, function(reason){
+      fetch('/api/orders/' + o.id + '/status', {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({status:'voided', voidedAt:new Date().toISOString(), voidReason: reason || '', statusBeforeVoid: o.status})})
+        .then(function(){ refresh(); toast('Order #' + (o.orderNumber || o.id) + ' voided'); });
+    });
+  };
+  window.__deleteOrder__ = function(o){
+    if (!o) return;
+    askPin({title:'Delete order permanently?', sub: label(o) + '. This removes it completely, including from History. This can\u2019t be undone.', ok:'Delete'}, function(){
+      fetch('/api/orders/' + o.id, {method:'DELETE'}).then(function(){ refresh(); toast('Order #' + (o.orderNumber || o.id) + ' deleted'); });
+    });
+  };
 })();
 </script>
     <script type="module" crossorigin src="./assets/staff-C0_JW9rY.js"></script>
