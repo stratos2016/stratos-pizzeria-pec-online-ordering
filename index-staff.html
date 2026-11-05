@@ -509,7 +509,7 @@
 
     function handleUnlock() {
       var val = document.getElementById('__pin_input__').value;
-      if (val === ADMIN_PIN) {
+      if (window.__checkMgrPin__ ? window.__checkMgrPin__(val).ok : val === ADMIN_PIN) {
         pinUnlocked = true;
         document.getElementById('__pin_input__').style.display = 'none';
         document.getElementById('__pin_btn__').textContent = 'Lock';
@@ -587,7 +587,7 @@
 
     if (!addItemPinUnlocked) {
       function handleAddPin() {
-        if (document.getElementById('__add_pin_input__').value === '2016') {
+        if (window.__checkMgrPin__(document.getElementById('__add_pin_input__').value).ok) {
           addItemPinUnlocked = true;
           bar.remove();
           injectAddItemForm();
@@ -776,7 +776,7 @@
     // PIN bar
     if (!unlocked) {
       h += '<div class="bg-muted/30 border border-border rounded-xl" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;margin-bottom:16px">'
-        + '<span class="text-muted-foreground" style="font-size:12px">Manager PIN to edit delivery:</span>'
+        + '<span class="text-muted-foreground" style="font-size:12px">Manager or owner PIN to edit delivery:</span>'
         + '<input id="dl_pin" type="password" maxlength="8" placeholder="\u2022\u2022\u2022\u2022" ' + INPUT + ' style="width:80px;border-radius:6px;padding:4px 8px;font-size:12px">'
         + '<button id="dl_unlock" ' + BTN + '>Unlock</button><span id="dl_pin_err" style="display:none;color:#dc2626;font-size:12px">Incorrect PIN</span></div>';
     } else {
@@ -862,7 +862,7 @@
     function $(id){ return root.querySelector('#' + id); }
     function rerender(cb){ setTimeout(function(){ var y = root.closest('.overflow-y-auto'); var top = y ? y.scrollTop : 0; render(root); if (y) y.scrollTop = top; if (cb) cb(); }, 0); }
     if ($('dl_unlock')) {
-      var go = function(){ if ($('dl_pin').value === PIN) { unlocked = true; rerender(); } else { $('dl_pin_err').style.display = 'inline'; $('dl_pin').value = ''; } };
+      var go = function(){ var c = window.__checkMgrPin__($('dl_pin').value); if (c.ok) { unlocked = true; rerender(); } else { var er = $('dl_pin_err'); er.textContent = c.employee ? 'Manager or owner PIN needed' : 'Incorrect PIN'; er.style.display = 'inline'; $('dl_pin').value = ''; } };
       $('dl_unlock').onclick = go; $('dl_pin').onkeydown = function(e){ if (e.key === 'Enter') go(); };
     }
     if ($('dl_lock')) $('dl_lock').onclick = function(){ unlocked = false; rerender(); };
@@ -920,7 +920,25 @@
 </script>
 <script>
 (function(){
-  var PIN = '2016';
+  var MASTER = '2016';
+  function cyrb53(str, seed){ var h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed; for (var i = 0, ch; i < str.length; i++) { ch = str.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); } h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909); h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909); return (h2 >>> 0).toString(16).padStart(8,'0') + (h1 >>> 0).toString(16).padStart(8,'0'); }
+  window.__pinHash__ = function(pin){ var s = 'stratos-staff:' + String(pin); return cyrb53(s, 7) + cyrb53(s, 2016); };
+  window.__staffList__ = function(){ try { return JSON.parse(localStorage.getItem('stratos_staff') || '[]'); } catch(e) { return []; } };
+  // Returns {ok, role, name, employee}
+  window.__checkMgrPin__ = function(pin){
+    pin = String(pin || '').trim(); if (!pin) return {ok:false};
+    if (pin === MASTER) return {ok:true, role:'Owner', name:'Owner (master PIN)', master:true};
+    var hsh = window.__pinHash__(pin);
+    var x = window.__staffList__().find(function(s){ return s.pinHash === hsh && s.active !== false; });
+    if (!x) return {ok:false};
+    var role = x.role || 'Employee';
+    if (role === 'Manager' || role === 'Owner') return {ok:true, role:role, name:x.first + ' ' + x.last, id:x.id};
+    return {ok:false, employee:true, role:role, name:x.first + ' ' + x.last};
+  };
+})();
+</script>
+<script>
+(function(){
   function el(html){ var d = document.createElement('div'); d.innerHTML = html; return d.firstElementChild; }
   function refresh(){ try { window.__qc__ && window.__qc__.invalidateQueries({queryKey:['/api/orders']}); window.__qc__ && window.__qc__.invalidateQueries({queryKey:['/api/stats']}); } catch(e) {} }
   function toast(msg){ var t = document.createElement('div'); t.textContent = msg; t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:1000001;font-family:sans-serif'; document.body.appendChild(t); setTimeout(function(){ t.remove(); }, 2200); }
@@ -933,7 +951,7 @@
       + '<p style="margin:0 0 4px;font-size:17px;font-weight:700">' + opts.title + '</p>'
       + '<p style="margin:0 0 14px;font-size:13px;color:' + mu + '">' + opts.sub + '</p>'
       + (opts.reason ? '<label style="font-size:12px;font-weight:600">Reason (optional)</label><input id="__oa_reason" maxlength="120" placeholder="e.g. Customer cancelled" style="display:block;width:100%;box-sizing:border-box;margin:4px 0 12px;padding:9px 10px;border:1px solid ' + bd + ';border-radius:8px;background:transparent;color:' + fg + ';font-size:14px">' : '')
-      + '<label style="font-size:12px;font-weight:600">Manager PIN</label><input id="__oa_pin" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="\u2022\u2022\u2022\u2022" style="display:block;width:100%;box-sizing:border-box;margin:4px 0 6px;padding:9px 10px;border:1px solid ' + bd + ';border-radius:8px;background:transparent;color:' + fg + ';font-size:16px;letter-spacing:4px">'
+      + '<label style="font-size:12px;font-weight:600">Manager or owner PIN</label><input id="__oa_pin" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="\u2022\u2022\u2022\u2022" style="display:block;width:100%;box-sizing:border-box;margin:4px 0 6px;padding:9px 10px;border:1px solid ' + bd + ';border-radius:8px;background:transparent;color:' + fg + ';font-size:16px;letter-spacing:4px">'
       + '<p id="__oa_err" style="display:none;margin:0 0 6px;color:#dc2626;font-size:12px">Incorrect PIN</p>'
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">'
       + '<button id="__oa_cancel" style="padding:10px;border-radius:8px;border:1px solid ' + bd + ';background:transparent;color:' + fg + ';font-size:14px;font-weight:600;cursor:pointer">Cancel</button>'
@@ -943,8 +961,9 @@
     var pin = m.querySelector('#__oa_pin'); setTimeout(function(){ (m.querySelector('#__oa_reason') || pin).focus(); }, 50);
     function close(){ m.remove(); }
     function go(){
-      if (pin.value !== PIN) { m.querySelector('#__oa_err').style.display = 'block'; pin.value = ''; pin.focus(); return; }
-      var r = m.querySelector('#__oa_reason'); close(); cb(r ? r.value.trim() : '');
+      var chk = window.__checkMgrPin__(pin.value);
+      if (!chk.ok) { var er = m.querySelector('#__oa_err'); er.textContent = chk.employee ? 'Employee PINs can\u2019t do this \u2014 a manager or owner PIN is needed' : 'Incorrect PIN'; er.style.display = 'block'; pin.value = ''; pin.focus(); return; }
+      var r = m.querySelector('#__oa_reason'); close(); cb(r ? r.value.trim() : '', chk);
     }
     m.querySelector('#__oa_cancel').onclick = close;
     m.querySelector('#__oa_ok').onclick = go;
@@ -953,8 +972,8 @@
   }
   window.__voidOrder__ = function(o){
     if (!o || o.status === 'voided') return;
-    askPin({title:'Void order?', sub: label(o) + '. It will move to History marked Voided and won\u2019t count in revenue.', ok:'Void Order', reason:true}, function(reason){
-      fetch('/api/orders/' + o.id + '/status', {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({status:'voided', voidedAt:new Date().toISOString(), voidReason: reason || '', statusBeforeVoid: o.status})})
+    askPin({title:'Void order?', sub: label(o) + '. It will move to History marked Voided and won\u2019t count in revenue.', ok:'Void Order', reason:true}, function(reason, who){
+      fetch('/api/orders/' + o.id + '/status', {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({status:'voided', voidedAt:new Date().toISOString(), voidReason: reason || '', voidedBy: who && who.name || '', statusBeforeVoid: o.status})})
         .then(function(){ refresh(); toast('Order #' + (o.orderNumber || o.id) + ' voided'); });
     });
   };
@@ -964,6 +983,159 @@
       fetch('/api/orders/' + o.id, {method:'DELETE'}).then(function(){ refresh(); toast('Order #' + (o.orderNumber || o.id) + ' deleted'); });
     });
   };
+})();
+</script>
+<script>
+(function(){
+  var PIN = '2016', KEY = 'stratos_staff';
+  var unlocked = false, editingId = null, q = '', openId = null, selfEdit = false;
+  function sha(t){ return Promise.resolve(window.__pinHash__(t)); }
+  var ROLES = ['Employee','Manager','Owner'], me = null;
+  var POS = ['Server','Cook','Kitchen Prep','Dishwasher','Delivery Driver','Cashier','Manager','Other'];
+  var FIELDS = [
+    ['first','First name',true,'text'],['last','Last name',true,'text'],
+    ['position','Position',true,'select'],['phone','Phone',true,'tel'],
+    ['email','Email',false,'email'],['address','Home address',false,'text'],
+    ['startDate','Start date',false,'date'],['availability','Availability',false,'textarea','e.g. Weeknights after 4, no Sundays'],
+    ['ecName','Emergency contact name',false,'text'],['ecPhone','Emergency contact phone',false,'tel'],
+    ['ecRelation','Relationship',false,'text','e.g. Parent, Spouse'],
+    ['medical','Allergies / medical notes',false,'textarea'],['notes','Other notes',false,'textarea']
+  ];
+  function load(){ try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch(e) { return []; } }
+  function save(l){ try { localStorage.setItem(KEY, JSON.stringify(l)); } catch(e) {} }
+  function esc(x){ return String(x == null ? '' : x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  var IN = 'class="bg-background text-foreground border border-border" style="display:block;width:100%;box-sizing:border-box;border-radius:8px;padding:9px 10px;font-size:14px;margin-top:4px"';
+  var BTN = 'class="bg-primary text-primary-foreground" style="border:none;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer"';
+  function card(title, sub, body){
+    return '<div class="bg-card border border-border rounded-xl" style="margin-bottom:16px;overflow:hidden"><div class="border-b border-border bg-muted/30" style="padding:10px 16px"><p style="margin:0;font-size:14px;font-weight:700">' + title + '</p>'
+      + (sub ? '<p class="text-muted-foreground" style="margin:2px 0 0;font-size:12px">' + sub + '</p>' : '') + '</div><div style="padding:14px 16px">' + body + '</div></div>';
+  }
+  function toast(msg){ var t = document.createElement('div'); t.textContent = msg; t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:999999'; document.body.appendChild(t); setTimeout(function(){ t.remove(); }, 2200); }
+  function formHtml(v){
+    v = v || {};
+    var h = '<form id="st_form" autocomplete="off"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">';
+    FIELDS.forEach(function(f){
+      var lab = '<label style="font-size:12px;font-weight:600">' + f[1] + (f[2] ? ' <span style="color:#dc2626">*</span>' : '') + '</label>';
+      var full = f[3] === 'textarea' || f[0] === 'address';
+      var inner;
+      if (f[3] === 'select') inner = '<select name="' + f[0] + '" ' + IN + (f[2] ? ' required' : '') + '><option value="">Choose...</option>' + POS.map(function(p){ return '<option' + (v[f[0]] === p ? ' selected' : '') + '>' + p + '</option>'; }).join('') + '</select>';
+      else if (f[3] === 'textarea') inner = '<textarea name="' + f[0] + '" rows="2" maxlength="300" placeholder="' + esc(f[4] || '') + '" ' + IN + '>' + esc(v[f[0]]) + '</textarea>';
+      else inner = '<input name="' + f[0] + '" type="' + f[3] + '"' + (f[3] === 'tel' ? ' inputmode="tel"' : '') + ' maxlength="120" placeholder="' + esc(f[4] || '') + '" value="' + esc(v[f[0]]) + '" ' + IN + (f[2] ? ' required' : '') + '>';
+      h += '<div style="' + (full ? 'grid-column:1/-1' : '') + '">' + lab + inner + '</div>';
+    });
+    var needPin = !editingId;
+    h += '<div><label style="font-size:12px;font-weight:600">' + (needPin ? 'Choose a PIN (4\u20136 digits) <span style="color:#dc2626">*</span>' : 'New PIN (leave blank to keep current)') + '</label><input name="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password" placeholder="\u2022\u2022\u2022\u2022" ' + IN + '></div>'
+      + '<div><label style="font-size:12px;font-weight:600">Confirm PIN' + (needPin ? ' <span style="color:#dc2626">*</span>' : '') + '</label><input name="pin2" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password" placeholder="\u2022\u2022\u2022\u2022" ' + IN + '></div>';
+    h += '</div><p class="text-muted-foreground" style="font-size:11px;margin:12px 0">Remember your PIN \u2014 you\u2019ll use it to update your info. Please don\u2019t enter your SIN or banking details here \u2014 give those to the manager directly.</p>'
+      + '<div style="display:flex;gap:10px;flex-wrap:wrap"><button type="submit" ' + BTN + '>' + (editingId ? 'Save Changes' : 'Submit My Info') + '</button>'
+      + (editingId ? '<button type="button" id="st_cancel" class="border border-border text-foreground" style="background:transparent;border-radius:8px;padding:10px 16px;font-size:14px;cursor:pointer">Cancel</button>' : '')
+      + '</div></form>';
+    return h;
+  }
+  function render(root){
+    var list = load();
+    var editing = editingId ? list.find(function(x){ return x.id === editingId; }) : null;
+    var h = '<div style="padding:20px;max-width:900px"><h1 class="font-serif text-2xl" style="margin:0 0 4px">Staff</h1>'
+      + '<p class="text-muted-foreground" style="margin:0 0 16px;font-size:13px">Employees: fill in your details below and tap Submit. Only managers and owners can view saved staff info.</p>';
+    h += card(editing ? 'Editing: ' + esc(editing.first + ' ' + editing.last) : 'Employee Info Form', editing ? (selfEdit ? 'Update your info, then tap Save Changes' : 'Manager edit') : 'Fields marked * are required', formHtml(editing));
+    if (!editing) h += card('Already submitted?', 'Enter your PIN to view or update your info', '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input id="st_mypin" type="password" inputmode="numeric" maxlength="6" placeholder="Your PIN" class="bg-background text-foreground border border-border" style="width:120px;border-radius:6px;padding:7px 9px;font-size:14px"><button id="st_myopen" ' + BTN.replace('padding:10px 16px;font-size:14px','padding:7px 14px;font-size:13px') + '>Update My Info</button><span id="st_myerr" style="display:none;color:#dc2626;font-size:12px">PIN not found</span></div>');
+    // manager area
+    var mb;
+    if (!unlocked) {
+      mb = '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="text-muted-foreground" style="font-size:12px">Manager or owner PIN to view staff list:</span>'
+        + '<input id="st_pin" type="password" inputmode="numeric" maxlength="8" placeholder="\u2022\u2022\u2022\u2022" class="bg-background text-foreground border border-border" style="width:90px;border-radius:6px;padding:6px 8px;font-size:13px">'
+        + '<button id="st_unlock" ' + BTN.replace('padding:10px 16px;font-size:14px','padding:6px 12px;font-size:12px') + '>Unlock</button><span id="st_err" style="display:none;color:#dc2626;font-size:12px">Incorrect PIN</span></div>';
+    } else {
+      var ql = q.toLowerCase();
+      var shown = list.filter(function(x){ return !ql || (x.first + ' ' + x.last + ' ' + x.position + ' ' + x.phone).toLowerCase().indexOf(ql) >= 0; })
+        .sort(function(a,b){ return (a.last + a.first).localeCompare(b.last + b.first); });
+      mb = '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px"><input id="st_q" placeholder="Search staff..." value="' + esc(q) + '" class="bg-background text-foreground border border-border" style="flex:1;min-width:160px;border-radius:6px;padding:7px 9px;font-size:13px">'
+        + '<button id="st_csv" class="border border-border text-foreground" style="background:transparent;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer">Export CSV</button>'
+        + '<button id="st_lock" style="background:none;border:none;color:#b45309;text-decoration:underline;font-size:12px;cursor:pointer">Lock</button></div>'
+        + '<p class="text-muted-foreground" style="margin:0 0 6px;font-size:12px">' + list.length + ' employee' + (list.length === 1 ? '' : 's') + ' on file</p>';
+      if (!shown.length) mb += '<p class="text-muted-foreground" style="font-size:13px;padding:12px 0">No staff info yet.</p>';
+      shown.forEach(function(x){
+        var open = openId === x.id;
+        mb += '<div class="border-b border-border" style="padding:10px 0">'
+          + '<div style="display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0"><p style="margin:0;font-size:14px;font-weight:600">' + esc(x.first + ' ' + x.last) + ' <span style="font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 6px;border-radius:4px;margin-left:4px;' + ((x.role||'Employee') === 'Owner' ? 'background:#0d1b34;color:#c09b6d' : (x.role||'Employee') === 'Manager' ? 'background:#c09b6d;color:#0d1b34' : 'background:rgba(120,120,120,.15);color:inherit') + '">' + esc(x.role || 'Employee') + '</span></p>'
+          + '<p class="text-muted-foreground" style="margin:0;font-size:12px">' + esc(x.position) + ' \u00b7 ' + esc(x.phone) + (x.pinHash ? '' : ' \u00b7 <span style="color:#b45309">no PIN</span>') + '</p></div>'
+          + '<button data-open="' + x.id + '" class="text-muted-foreground" style="background:none;border:none;font-size:12px;text-decoration:underline;cursor:pointer">' + (open ? 'Hide' : 'View') + '</button></div>';
+        if (open) {
+          mb += '<div style="margin-top:8px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:6px 16px;font-size:13px">';
+          FIELDS.slice(2).forEach(function(f){ if (x[f[0]]) mb += '<div><span class="text-muted-foreground" style="font-size:11px;display:block">' + f[1] + '</span>' + esc(x[f[0]]).replace(/\n/g,'<br>') + '</div>'; });
+          mb += '</div><p class="text-muted-foreground" style="font-size:11px;margin:8px 0 0">Added ' + new Date(x.createdAt).toLocaleDateString() + (x.updatedAt ? ' \u00b7 Updated ' + new Date(x.updatedAt).toLocaleDateString() : '') + '</p>'
+            + (function(){ var xr = x.role || 'Employee', isOwner = me && me.role === 'Owner'; var canChange = isOwner || xr !== 'Owner'; var opts = ROLES.filter(function(r){ return isOwner || r !== 'Owner'; }); if (xr === 'Owner' && !isOwner) opts = ['Owner']; return '<div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap"><span style="font-size:12px;font-weight:600">Role:</span><select data-role="' + x.id + '" class="bg-background text-foreground border border-border" style="border-radius:6px;padding:5px 8px;font-size:13px"' + (canChange && !(me && me.id === x.id) ? '' : ' disabled') + '>' + opts.map(function(r){ return '<option' + (r === xr ? ' selected' : '') + '>' + r + '</option>'; }).join('') + '</select>' + '<span class="text-muted-foreground" style="font-size:11px">' + (me && me.id === x.id ? 'You can\u2019t change your own role' : xr === 'Employee' ? 'Can\u2019t void, delete or edit prices' : 'Can void, delete and edit prices') + '</span></div>'; })()
+            + '<div style="display:flex;gap:14px;margin-top:8px"><button data-edit="' + x.id + '" style="background:none;border:none;font-size:12px;font-weight:600;text-decoration:underline;cursor:pointer" class="text-foreground">Edit</button>'
+            + '<button data-del="' + x.id + '" style="background:none;border:none;color:#dc2626;font-size:12px;font-weight:600;text-decoration:underline;cursor:pointer">Delete</button></div>';
+        }
+        mb += '</div>';
+      });
+    }
+    h += card('Staff List', 'Managers & owners only \u00b7 saved on this device', mb) + '</div>';
+    root.innerHTML = h;
+    wire(root);
+  }
+  function wire(root){
+    function $(id){ return root.querySelector('#' + id); }
+    function rr(){ setTimeout(function(){ render(root); }, 0); }
+    $('st_form').onsubmit = function(e){
+      e.preventDefault();
+      var fd = new FormData(e.target), rec = {};
+      FIELDS.forEach(function(f){ rec[f[0]] = String(fd.get(f[0]) || '').trim(); });
+      var miss = FIELDS.filter(function(f){ return f[2] && !rec[f[0]]; });
+      if (miss.length) { toast('Please fill in: ' + miss.map(function(f){ return f[1]; }).join(', ')); return; }
+      var pin = String(fd.get('pin') || '').trim(), pin2 = String(fd.get('pin2') || '').trim();
+      if (!editingId && !pin) { toast('Please choose a PIN'); return; }
+      if (pin || pin2) {
+        if (!/^\d{4,6}$/.test(pin)) { toast('PIN must be 4 to 6 digits'); return; }
+        if (pin !== pin2) { toast('PINs don\u2019t match'); return; }
+        if (pin === PIN) { toast('That PIN is reserved \u2014 choose another'); return; }
+        if (/^(\d)\1+$/.test(pin) || '0123456789'.indexOf(pin) >= 0) { toast('PIN too easy to guess \u2014 choose another'); return; }
+      }
+      (pin ? sha(pin) : Promise.resolve(null)).then(function(ph){
+        var list = load();
+        if (ph && list.some(function(y){ return y.pinHash === ph && y.id !== editingId; })) { toast('That PIN is already taken \u2014 choose another'); return; }
+        if (editingId) {
+          var x = list.find(function(y){ return y.id === editingId; });
+          if (x) { Object.assign(x, rec, {updatedAt:new Date().toISOString()}); if (ph) x.pinHash = ph; }
+          editingId = null; selfEdit = false; save(list); toast('Staff info updated'); rr(); return;
+        }
+        rec.id = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2,6); rec.createdAt = new Date().toISOString(); rec.pinHash = ph; rec.role = 'Employee';
+        list.push(rec); save(list); toast('Thanks ' + rec.first + ' \u2014 your info was saved'); rr();
+      });
+    };
+    if ($('st_cancel')) $('st_cancel').onclick = function(){ editingId = null; selfEdit = false; rr(); };
+    if ($('st_myopen')) {
+      var mine = function(){ var v = $('st_mypin').value.trim(); if (!v) return; sha(v).then(function(ph){ var x = load().find(function(y){ return y.pinHash === ph; }); if (!x) { $('st_myerr').style.display = 'inline'; $('st_mypin').value = ''; return; } editingId = x.id; selfEdit = true; rr(); }); };
+      $('st_myopen').onclick = mine; $('st_mypin').onkeydown = function(e){ if (e.key === 'Enter') mine(); };
+    }
+    if ($('st_unlock')) {
+      var go = function(){ var c = window.__checkMgrPin__($('st_pin').value); if (c.ok) { unlocked = true; me = c; rr(); } else { var er = $('st_err'); er.textContent = c.employee ? 'Employee PINs can\u2019t open the staff list' : 'Incorrect PIN'; er.style.display = 'inline'; $('st_pin').value = ''; } };
+      $('st_unlock').onclick = go; $('st_pin').onkeydown = function(e){ if (e.key === 'Enter') go(); };
+    }
+    if (!unlocked) return;
+    $('st_lock').onclick = function(){ unlocked = false; me = null; editingId = null; selfEdit = false; openId = null; rr(); };
+    $('st_q').oninput = function(e){ q = e.target.value; var pos = e.target.selectionStart; setTimeout(function(){ render(root); var n = root.querySelector('#st_q'); if (n) { n.focus(); try { n.setSelectionRange(pos,pos); } catch(x) {} } }, 0); };
+    root.querySelectorAll('[data-open]').forEach(function(b){ b.onclick = function(){ var id = b.getAttribute('data-open'); openId = openId === id ? null : id; rr(); }; });
+    root.querySelectorAll('[data-edit]').forEach(function(b){ b.onclick = function(){ var tx = load().find(function(y){ return y.id === b.getAttribute('data-edit'); }); if (tx && tx.role === 'Owner' && !(me && me.role === 'Owner')) { toast('Only an owner can edit an owner'); return; } editingId = b.getAttribute('data-edit'); selfEdit = false; rr(); var y = root.closest('.overflow-y-auto'); if (y) y.scrollTop = 0; }; });
+    root.querySelectorAll('[data-role]').forEach(function(s){ s.onchange = function(){ var list = load(), x = list.find(function(y){ return y.id === s.getAttribute('data-role'); }); if (!x) return; if (s.value === 'Owner' && !(me && me.role === 'Owner')) { toast('Only an owner can assign the Owner role'); rr(); return; } x.role = s.value; x.updatedAt = new Date().toISOString(); save(list); toast(x.first + ' is now ' + (s.value === 'Owner' ? 'an ' : 'a ') + s.value); rr(); }; });
+    root.querySelectorAll('[data-del]').forEach(function(b){ b.onclick = function(){
+      var list = load(), x = list.find(function(y){ return y.id === b.getAttribute('data-del'); });
+      if (x && (x.role === 'Owner') && !(me && me.role === 'Owner')) { toast('Only an owner can delete an owner'); return; }
+      if (!x || !confirm('Delete ' + x.first + ' ' + x.last + '\u2019s info? This can\u2019t be undone.')) return;
+      save(list.filter(function(y){ return y.id !== x.id; })); if (editingId === x.id) editingId = null; toast('Deleted'); rr();
+    }; });
+    $('st_csv').onclick = function(){
+      var list = load(); var cols = FIELDS.map(function(f){ return f[0]; }).concat(['role','createdAt','updatedAt']);
+      var head = FIELDS.map(function(f){ return f[1]; }).concat(['Role','Added','Updated']);
+      var rows = [head].concat(list.map(function(x){ return cols.map(function(c){ return x[c] || ''; }); }));
+      var csv = rows.map(function(r){ return r.map(function(v){ v = String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v; }).join(','); }).join('\n');
+      var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = 'stratos-staff-' + new Date().toISOString().slice(0,10) + '.csv';
+      document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    };
+  }
+  window.__renderStaffAdmin__ = function(root){ unlocked = false; me = null; editingId = null; selfEdit = false; openId = null; q = ''; render(root); };
+  window.__staffPinLookup__ = function(pin){ return sha(pin).then(function(ph){ return load().find(function(y){ return y.pinHash === ph; }) || null; }); };
 })();
 </script>
     <script type="module" crossorigin src="./assets/staff-C0_JW9rY.js"></script>
