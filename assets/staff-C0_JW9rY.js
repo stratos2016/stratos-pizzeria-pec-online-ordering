@@ -123,6 +123,9 @@ import{c as P,w as ws,r as o,x as Ss,j as e,a as O,d as js,q as W,u as xe,n as q
   overlay.id='__print_overlay__';
   overlay.style.cssText='position:fixed;inset:0;z-index:99999;background:#fff;overflow:auto;';
   overlay.innerHTML=html;
+  const ps=document.createElement('style');
+  ps.textContent='@media print{body>*:not(#__print_overlay__){display:none !important;}html,body{width:auto !important;height:auto !important;overflow:visible !important;background:#fff !important;}#__print_overlay__{position:static !important;inset:auto !important;overflow:visible !important;}#__print_overlay__ button,#__print_overlay__ .no-print{display:none !important;}#__print_overlay__ pre{font-size:10.5px !important;line-height:1.3 !important;white-space:pre-wrap !important;}}';
+  overlay.appendChild(ps);
   // Add a close button
   const closeBtn=document.createElement('button');
   closeBtn.textContent='✕ Close';
