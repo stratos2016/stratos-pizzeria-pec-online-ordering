@@ -240,9 +240,14 @@
       var body = (opts && opts.body) ? JSON.parse(opts.body) : {};
       var orders = getOrders();
       var order = orders.find(function(o) { return o.id === id; });
+      var prevStatus = order ? order.status : null;
       if (order) Object.assign(order, body);
       saveOrders(orders);
       broadcast({type:'order_updated', order:order});
+      if (order && body.status && body.status !== prevStatus && (body.status === 'working' || body.status === 'done')) {
+        var evOrder = JSON.parse(JSON.stringify(order)), ev = body.status === 'working' ? 'accepted' : 'ready';
+        setTimeout(function(){ try { window.__orderEmail__ && window.__orderEmail__(evOrder, ev); } catch(e) {} }, 50);
+      }
       return Promise.resolve(new Response(JSON.stringify(order||{}), {status:200,headers:{'Content-Type':'application/json'}}));
     }
 
@@ -1163,6 +1168,164 @@
   window.__renderStaffAdmin__ = function(root){ unlocked = false; me = null; editingId = null; selfEdit = false; openId = null; q = ''; render(root); };
   window.__staffPinLookup__ = function(pin){ return sha(pin).then(function(ph){ return load().find(function(y){ return y.pinHash === ph; }) || null; }); };
 })();
+</script>
+<script>
+(function(){
+  var KEY = 'stratos_email';
+  var ADDR = '20018 Loyalist Parkway (corner of Hwy 33 & County Rd 1), Consecon';
+  var DEF = {
+    enabled: false, url: '', secret: '', fromName: "Strato's Pizzeria", onAccept: false, onReady: true,
+    footer: 'This is an automated message from a no-reply address. Replies are not monitored. Questions about your order? Call us at (613) 394-3000.',
+    tpl: {
+      accept_takeout: {s: 'Order #{order} confirmed \u2014 ready at {time}', b: "Hi {name},\n\nThanks for ordering from Strato's Pizzeria! Your order #{order} has been accepted and will be ready for pickup at {time}.\n\n{items}\n\nTotal: {total} \u2014 pay at pickup.\n\nPickup: " + ADDR},
+      accept_delivery: {s: 'Order #{order} confirmed \u2014 arriving around {time}', b: "Hi {name},\n\nThanks for ordering from Strato's Pizzeria! Your order #{order} has been accepted and should arrive around {time}.\n\n{items}\n\nTotal: {total} \u2014 pay at the door."},
+      ready_takeout: {s: 'Your order #{order} is ready for pickup', b: "Hi {name},\n\nGood news \u2014 your order #{order} is ready! Come pick it up at " + ADDR + ".\n\nTotal: {total} \u2014 pay at pickup.\n\nSee you soon!"},
+      ready_delivery: {s: 'Your order #{order} is on its way', b: "Hi {name},\n\nYour order #{order} is out for delivery and will be with you soon.\n\nTotal: {total} \u2014 pay at the door.\n\nEnjoy!"}
+    }
+  };
+  var TPL_LABEL = {accept_takeout: 'Accepted \u2014 Take Out', accept_delivery: 'Accepted \u2014 Delivery', ready_takeout: 'Done \u2014 Ready for pickup', ready_delivery: 'Done \u2014 Out for delivery'};
+  function load(){
+    var c = {}; try { c = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch(e) {}
+    var o = Object.assign({}, DEF, c); o.tpl = {};
+    Object.keys(DEF.tpl).forEach(function(k){ o.tpl[k] = Object.assign({}, DEF.tpl[k], (c.tpl || {})[k] || {}); });
+    return o;
+  }
+  function save(c){ try { localStorage.setItem(KEY, JSON.stringify(c)); } catch(e) {} }
+  function esc(x){ return String(x == null ? '' : x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function money(n){ return '$' + (Number(n) || 0).toFixed(2); }
+  function fmtT(d){ return d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit', hour12:true}).replace(' ', '').toLowerCase(); }
+  function itemsText(o){
+    return (o.items || []).map(function(i){ var q = i.quantity || 1; return q + ' x ' + i.name + ' \u2014 ' + money((i.price || 0) * q); }).join('\n');
+  }
+  function fill(t, o){
+    var when = o.promisedAt || o.readyBy; var tm = '';
+    if (when) { var d = new Date(when); if (!isNaN(d)) tm = fmtT(d); }
+    if (!tm && o.estimatedMinutes) { var d2 = new Date(Date.now() + o.estimatedMinutes * 60000); tm = fmtT(d2); }
+    var first = String(o.customerName || '').trim().split(/\s+/)[0] || 'there';
+    return String(t).replace(/\{name\}/g, first).replace(/\{order\}/g, o.orderNumber || o.id).replace(/\{time\}/g, tm || 'soon')
+      .replace(/\{total\}/g, money(o.total)).replace(/\{items\}/g, itemsText(o));
+  }
+  function post(cfg, data){
+    data.key = cfg.secret;
+    return fetch(cfg.url, {method:'POST', body: JSON.stringify(data)}).then(function(r){ return r.json(); });
+  }
+  window.__emailPost__ = post;
+  function mark(id, txt){
+    try {
+      var list = JSON.parse(localStorage.getItem('stratos_orders') || '[]');
+      var x = list.find(function(y){ return y.id === id; }); if (!x) return;
+      x.emailStatus = txt; x.emailLog = (x.emailLog || []).concat([{at: new Date().toISOString(), msg: txt}]);
+      localStorage.setItem('stratos_orders', JSON.stringify(list));
+      window.__qc__ && window.__qc__.invalidateQueries({queryKey:['/api/orders']});
+    } catch(e) {}
+  }
+  window.__orderEmail__ = function(o, ev){
+    var cfg = load();
+    if (!o || !o.customerEmail || !cfg.enabled || !cfg.url || !cfg.secret) return;
+    if (ev === 'accepted' && !cfg.onAccept) return;
+    if (ev === 'ready' && !cfg.onReady) return;
+    var k = (ev === 'accepted' ? 'accept_' : 'ready_') + (o.type === 'delivery' ? 'delivery' : 'takeout');
+    var t = cfg.tpl[k]; var what = ev === 'accepted' ? 'Confirmation' : (o.type === 'delivery' ? 'Out-for-delivery' : 'Ready');
+    mark(o.id, '\u2709 Sending ' + what.toLowerCase() + ' email\u2026');
+    post(cfg, {action:'send', to:o.customerEmail, subject: fill(t.s, o), body: fill(t.b, o), footer: cfg.footer, fromName: cfg.fromName})
+      .then(function(r){ mark(o.id, r && r.ok ? '\u2709 ' + what + ' email sent ' + fmtT(new Date()) : '\u26a0 Email not sent (' + ((r && r.error) || 'error') + ') \u2014 call customer'); })
+      .catch(function(){ mark(o.id, '\u26a0 Couldn\u2019t confirm email \u2014 call customer if needed'); });
+  };
+
+  var GS = "// Strato's Pizzeria - order email sender (Google Apps Script)\n// Paste this whole file into a new project at script.google.com while signed in\n// to the shop's no-reply Gmail, then Deploy > New deployment > Web app.\nvar SECRET = '__SECRET__';\nvar DEFAULT_NAME = \"Strato's Pizzeria\";\n\nfunction doPost(e) {\n  try {\n    var d = JSON.parse(e.postData.contents);\n    if (!d || d.key !== SECRET) return out_({ok: false, error: 'Wrong secret key'});\n    if (d.action === 'ping') return out_({ok: true, quota: MailApp.getRemainingDailyQuota(), account: Session.getEffectiveUser().getEmail()});\n    var to = String(d.to || '').trim();\n    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$/.test(to)) return out_({ok: false, error: 'Invalid email address'});\n    var cache = CacheService.getScriptCache(), ck = 'n_' + to.toLowerCase(), n = Number(cache.get(ck) || 0);\n    if (n >= 8) return out_({ok: false, error: 'Too many emails to this address today'});\n    var subject = String(d.subject || 'Your order').slice(0, 150);\n    var body = String(d.body || '').slice(0, 5000);\n    var footer = String(d.footer || '').slice(0, 500);\n    var name = String(d.fromName || DEFAULT_NAME).slice(0, 60);\n    var html = '<div style=\"font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden\">'\n      + '<div style=\"background:#0d1b34;color:#c09b6d;padding:18px 24px;font-size:22px;font-weight:bold;font-family:Georgia,serif\">' + esc_(name) + '<\/div>'\n      + '<div style=\"padding:22px 24px;color:#111827;font-size:15px;line-height:1.55\">' + esc_(body).replace(/\\n/g, '<br>') + '<\/div>'\n      + '<div style=\"padding:14px 24px;background:#f9fafb;color:#6b7280;font-size:12px;line-height:1.5\">' + esc_(footer) + '<\/div><\/div>';\n    var opts = {name: name, htmlBody: html, noReply: true};\n    try { MailApp.sendEmail(to, subject, body + '\\n\\n' + footer, opts); }\n    catch (x) { delete opts.noReply; MailApp.sendEmail(to, subject, body + '\\n\\n' + footer, opts); }\n    cache.put(ck, String(n + 1), 21600);\n    return out_({ok: true, quota: MailApp.getRemainingDailyQuota()});\n  } catch (err) {\n    return out_({ok: false, error: String(err)});\n  }\n}\nfunction doGet() { return out_({ok: true, service: \"Strato's order emails\"}); }\nfunction out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }\nfunction esc_(s) { return String(s).replace(/&/g, '&amp;').replace(/<\/g, '&lt;').replace(/>/g, '&gt;'); }\nfunction authorize() { MailApp.getRemainingDailyQuota(); }\n";
+  var unlocked = false;
+  function toast(msg){ var t = document.createElement('div'); t.textContent = msg; t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:999999;max-width:90vw;text-align:center'; document.body.appendChild(t); setTimeout(function(){ t.remove(); }, 2600); }
+  var IN = 'class="bg-background text-foreground border border-border" style="display:block;width:100%;box-sizing:border-box;border-radius:8px;padding:9px 10px;font-size:14px;margin-top:4px"';
+  var BTN = 'class="bg-primary text-primary-foreground" style="border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer"';
+  var BTN2 = 'class="border border-border text-foreground" style="background:transparent;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer"';
+  function card(title, sub, body){
+    return '<div class="bg-card border border-border rounded-xl" style="margin-bottom:16px;overflow:hidden"><div class="border-b border-border bg-muted/30" style="padding:10px 16px"><p style="margin:0;font-size:14px;font-weight:700">' + title + '</p>'
+      + (sub ? '<p class="text-muted-foreground" style="margin:2px 0 0;font-size:12px">' + sub + '</p>' : '') + '</div><div style="padding:14px 16px">' + body + '</div></div>';
+  }
+  function lab(t){ return '<label style="font-size:12px;font-weight:600">' + t + '</label>'; }
+  function genSecret(){ var a = new Uint8Array(18); crypto.getRandomValues(a); return Array.prototype.map.call(a, function(b){ return ('0' + b.toString(36)).slice(-2); }).join('').slice(0, 24); }
+  function scriptText(c){ return GS.replace('__SECRET__', c.secret || 'GENERATE-A-KEY-FIRST'); }
+  function render(root){
+    var c = load();
+    var h = '<div style="padding:20px;max-width:900px"><h1 class="font-serif text-2xl" style="margin:0 0 4px">Email Setup</h1>'
+      + '<p class="text-muted-foreground" style="margin:0 0 16px;font-size:13px">Automatic order emails sent from the shop\u2019s no-reply Gmail. Customers who enter an email at checkout get them.</p>';
+    if (!unlocked) {
+      h += card('Locked', 'Manager or owner PIN required to view or change email settings',
+        '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input id="em_pin" type="password" inputmode="numeric" maxlength="8" placeholder="\u2022\u2022\u2022\u2022" class="bg-background text-foreground border border-border" style="width:110px;border-radius:6px;padding:7px 9px;font-size:14px"><button id="em_unlock" ' + BTN + '>Unlock</button><span id="em_err" style="display:none;color:#dc2626;font-size:12px"></span></div>'
+        + '<p class="text-muted-foreground" style="margin:12px 0 0;font-size:12px">Status: ' + (c.enabled && c.url ? '<b style="color:#16a34a">Emails ON</b>' : '<b>Emails OFF</b>') + '</p>');
+      root.innerHTML = h + '</div>';
+      var go = function(){ var r = window.__checkMgrPin__(root.querySelector('#em_pin').value); if (r.ok) { unlocked = true; render(root); } else { var er = root.querySelector('#em_err'); er.textContent = r.employee ? 'Manager or owner PIN needed' : 'Incorrect PIN'; er.style.display = 'inline'; root.querySelector('#em_pin').value = ''; } };
+      root.querySelector('#em_unlock').onclick = go; root.querySelector('#em_pin').onkeydown = function(e){ if (e.key === 'Enter') go(); };
+      return;
+    }
+    h += card('Status', '', '<label style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;cursor:pointer"><input type="checkbox" id="em_on"' + (c.enabled ? ' checked' : '') + ' style="width:18px;height:18px"> Send order emails automatically</label>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center"><button id="em_ping" ' + BTN2 + '>Test connection</button><span id="em_ping_res" style="font-size:12px"></span></div>'
+      + '<button id="em_lock" style="margin-top:10px;background:none;border:none;color:#b45309;text-decoration:underline;font-size:12px;cursor:pointer;padding:0">Lock</button>');
+    h += card('Connection', 'From your Google script (see setup steps below)',
+      '<div style="display:grid;gap:12px">'
+      + '<div>' + lab('Web app URL (ends in /exec)') + '<input id="em_url" ' + IN + ' placeholder="https://script.google.com/macros/s/.../exec" value="' + esc(c.url) + '"></div>'
+      + '<div>' + lab('Secret key') + '<div style="display:flex;gap:8px;align-items:center"><input id="em_secret" ' + IN.replace('display:block;width:100%', 'display:block;flex:1;width:auto') + ' value="' + esc(c.secret) + '" placeholder="Tap Generate"><button id="em_gen" ' + BTN2 + ' style="margin-top:4px">Generate</button></div><p class="text-muted-foreground" style="font-size:11px;margin:4px 0 0">Must match the key inside the Google script. If you change it, copy the script again and redeploy.</p></div>'
+      + '<div>' + lab('Sender name (what customers see)') + '<input id="em_from" ' + IN + ' maxlength="60" value="' + esc(c.fromName) + '"></div>'
+      + '</div>');
+    h += card('When to email', 'Free Gmail can send about 100 emails a day',
+      '<label style="display:flex;gap:10px;align-items:flex-start;font-size:14px;margin-bottom:10px;cursor:pointer"><input type="checkbox" id="em_acc"' + (c.onAccept ? ' checked' : '') + ' style="width:18px;height:18px;margin-top:2px"><span><b>When an order is accepted</b><br><span class="text-muted-foreground" style="font-size:12px">Confirmation with the ready / delivery time</span></span></label>'
+      + '<label style="display:flex;gap:10px;align-items:flex-start;font-size:14px;cursor:pointer"><input type="checkbox" id="em_rdy"' + (c.onReady ? ' checked' : '') + ' style="width:18px;height:18px;margin-top:2px"><span><b>When an order is marked Done</b><br><span class="text-muted-foreground" style="font-size:12px">\u201cReady for pickup\u201d or \u201cOut for delivery\u201d</span></span></label>');
+    var tb = '<p class="text-muted-foreground" style="font-size:12px;margin:0 0 10px">Fill-ins: <code>{name}</code> first name \u00b7 <code>{order}</code> order # \u00b7 <code>{time}</code> ready/delivery time \u00b7 <code>{total}</code> \u00b7 <code>{items}</code> item list</p>';
+    Object.keys(DEF.tpl).forEach(function(k){
+      tb += '<div style="border-top:1px solid rgba(128,128,128,.2);padding:10px 0"><p style="margin:0 0 6px;font-size:13px;font-weight:700">' + TPL_LABEL[k] + '</p>'
+        + lab('Subject') + '<input data-tpl-s="' + k + '" ' + IN + ' maxlength="150" value="' + esc(c.tpl[k].s) + '">'
+        + '<div style="margin-top:8px">' + lab('Message') + '<textarea data-tpl-b="' + k + '" rows="6" ' + IN + '>' + esc(c.tpl[k].b) + '</textarea></div></div>';
+    });
+    tb += '<div style="border-top:1px solid rgba(128,128,128,.2);padding-top:10px">' + lab('No-reply footer (bottom of every email)') + '<textarea id="em_footer" rows="2" ' + IN + '>' + esc(c.footer) + '</textarea></div>'
+      + '<button id="em_reset" style="margin-top:10px;background:none;border:none;color:#b45309;text-decoration:underline;font-size:12px;cursor:pointer;padding:0">Reset messages to default</button>';
+    h += card('Messages', 'What customers receive', tb);
+    h += '<div style="display:flex;gap:10px;margin:-4px 0 16px"><button id="em_save" ' + BTN + ' style="padding:10px 18px;font-size:14px">Save Email Settings</button></div>';
+    h += card('Send a test', 'Sends the \u201cReady for pickup\u201d message with sample order info',
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input id="em_test_to" type="email" placeholder="your@email.com" class="bg-background text-foreground border border-border" style="flex:1;min-width:200px;border-radius:6px;padding:8px 10px;font-size:14px"><button id="em_test" ' + BTN + '>Send Test Email</button></div><p id="em_test_res" style="font-size:12px;margin:8px 0 0"></p>');
+    var steps = [
+      'Create a free Gmail just for sending, e.g. <b>stratospizza.noreply@gmail.com</b>. Nobody needs to check it.',
+      'Tap <b>Generate</b> next to Secret key above, then <b>Save Email Settings</b>.',
+      'Signed in to that Gmail, open <a href="https://script.google.com/home/projects/create" target="_blank" rel="noopener" style="text-decoration:underline">script.google.com</a> \u2192 New project. Delete what\u2019s there, paste the script below (<b>Copy Script</b>), and click the save icon.',
+      'Click <b>Deploy \u2192 New deployment</b> \u2192 gear icon \u2192 <b>Web app</b>. Set <b>Execute as: Me</b> and <b>Who has access: Anyone</b>. Click Deploy.',
+      'Click <b>Authorize access</b>, pick the no-reply Gmail, then <b>Advanced \u2192 Go to project \u2192 Allow</b>. (Google shows this warning for any personal script.)',
+      'Copy the <b>Web app URL</b> (ends in /exec), paste it above, tick \u201cSend order emails automatically\u201d, Save, then <b>Test connection</b> and <b>Send Test Email</b>.',
+      'Optional: in that Gmail, turn on a vacation responder saying \u201cThis inbox isn\u2019t monitored \u2014 call (613) 394-3000.\u201d'
+    ];
+    h += card('Setup steps (one time)', 'About 5 minutes',
+      '<ol style="margin:0 0 12px;padding-left:20px;font-size:13px;line-height:1.6">' + steps.map(function(s){ return '<li style="margin-bottom:4px">' + s + '</li>'; }).join('') + '</ol>'
+      + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><b style="font-size:13px">Google script</b><button id="em_copy" ' + BTN2 + ' style="padding:5px 12px;font-size:12px">Copy Script</button></div>'
+      + '<textarea id="em_gs" readonly rows="10" class="bg-background text-foreground border border-border" style="display:block;width:100%;box-sizing:border-box;border-radius:8px;padding:9px 10px;font-size:11px;font-family:ui-monospace,Menlo,monospace;white-space:pre">' + esc(scriptText(c)) + '</textarea>');
+    root.innerHTML = h + '</div>';
+    var $ = function(id){ return root.querySelector('#' + id); };
+    function collect(){
+      var n = load();
+      n.enabled = $('em_on').checked; n.url = $('em_url').value.trim(); n.secret = $('em_secret').value.trim(); n.fromName = $('em_from').value.trim() || DEF.fromName;
+      n.onAccept = $('em_acc').checked; n.onReady = $('em_rdy').checked; n.footer = $('em_footer').value.trim();
+      root.querySelectorAll('[data-tpl-s]').forEach(function(x){ n.tpl[x.getAttribute('data-tpl-s')].s = x.value; });
+      root.querySelectorAll('[data-tpl-b]').forEach(function(x){ n.tpl[x.getAttribute('data-tpl-b')].b = x.value; });
+      return n;
+    }
+    function check(n){ if (n.url && !/^https:\/\/script\.google(usercontent)?\.com\//.test(n.url)) { toast('The URL should start with https://script.google.com/'); return false; } if (n.enabled && (!n.url || !n.secret)) { toast('Add the Web app URL and secret key before turning emails on'); return false; } return true; }
+    $('em_save').onclick = function(){ var n = collect(); if (!check(n)) return; save(n); toast('Email settings saved'); render(root); };
+    $('em_lock').onclick = function(){ unlocked = false; render(root); };
+    $('em_gen').onclick = function(){ if ($('em_secret').value && !confirm('Make a new key? You\u2019ll need to copy the script again and redeploy it.')) return; $('em_secret').value = genSecret(); var n = collect(); save(n); $('em_gs').value = scriptText(n); toast('New key saved \u2014 copy the script below'); };
+    $('em_reset').onclick = function(){ if (!confirm('Reset all messages to the default wording?')) return; var n = collect(); n.tpl = JSON.parse(JSON.stringify(DEF.tpl)); n.footer = DEF.footer; save(n); render(root); toast('Messages reset'); };
+    $('em_copy').onclick = function(){ var ta = $('em_gs'); ta.value = scriptText(collect()); ta.select(); var ok = false; try { ok = document.execCommand('copy'); } catch(e) {} if (navigator.clipboard) navigator.clipboard.writeText(ta.value).then(function(){ toast('Script copied'); }, function(){ if (!ok) toast('Select the text and copy it manually'); }); else toast(ok ? 'Script copied' : 'Select the text and copy it manually'); };
+    $('em_ping').onclick = function(){ var n = collect(); var res = $('em_ping_res'); if (!n.url || !n.secret) { res.textContent = 'Add the URL and secret key first'; res.style.color = '#dc2626'; return; } res.textContent = 'Checking\u2026'; res.style.color = '';
+      post(n, {action:'ping'}).then(function(r){ if (r && r.ok) { res.innerHTML = '<span style="color:#16a34a">\u2713 Connected' + (r.account ? ' as ' + esc(r.account) : '') + ' \u2014 ' + r.quota + ' emails left today</span>'; } else { res.textContent = '\u2717 ' + ((r && r.error) || 'Failed'); res.style.color = '#dc2626'; } })
+        .catch(function(){ res.textContent = '\u2717 Couldn\u2019t reach the script. Check the URL and that access is set to \u201cAnyone\u201d.'; res.style.color = '#dc2626'; }); };
+    $('em_test').onclick = function(){ var n = collect(); var to = $('em_test_to').value.trim(); var res = $('em_test_res');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(to)) { res.textContent = 'Enter a valid email'; res.style.color = '#dc2626'; return; }
+      if (!n.url || !n.secret) { res.textContent = 'Add the URL and secret key first'; res.style.color = '#dc2626'; return; }
+      var sample = {id: 0, orderNumber: 'TEST', customerName: 'Test Customer', type: 'takeout', total: 24.86, promisedAt: new Date(Date.now() + 30*60000).toISOString(), items: [{name: 'Med Pepperoni Pizza', price: 18, quantity: 1}, {name: 'Garlic Bread', price: 4, quantity: 1}]};
+      res.textContent = 'Sending\u2026'; res.style.color = '';
+      post(n, {action:'send', to: to, subject: '[TEST] ' + fill(n.tpl.ready_takeout.s, sample), body: fill(n.tpl.ready_takeout.b, sample), footer: n.footer, fromName: n.fromName})
+        .then(function(r){ if (r && r.ok) { res.textContent = '\u2713 Test email sent \u2014 check the inbox (and spam folder)'; res.style.color = '#16a34a'; } else { res.textContent = '\u2717 ' + ((r && r.error) || 'Failed'); res.style.color = '#dc2626'; } })
+        .catch(function(){ res.textContent = '\u2717 Couldn\u2019t reach the script'; res.style.color = '#dc2626'; }); };
+  }
+  window.__renderEmailAdmin__ = function(root){ unlocked = false; render(root); };
+})();
+
 </script>
     <script type="module" crossorigin src="./assets/staff-C0_JW9rY.js"></script>
     <link rel="modulepreload" crossorigin href="./assets/index-CVKFgV60.js">
