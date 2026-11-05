@@ -991,7 +991,7 @@
   var PIN = '2016', KEY = 'stratos_staff';
   var unlocked = false, editingId = null, q = '', openId = null, selfEdit = false;
   function sha(t){ return Promise.resolve(window.__pinHash__(t)); }
-  var ROLES = ['Employee','Manager','Owner'], me = null, ownerOk = false;
+  var ROLES = ['Employee','Manager','Owner'], me = null, ownerOk = false, formLvl = '';
   var UNL = 'style="background:none;border:none;color:#b45309;text-decoration:underline;font-size:12px;font-weight:600;cursor:pointer;padding:0"';
   function ownOpt(sel){ return ownerOk ? '<option' + (sel ? ' selected' : '') + ' value="Owner">Owner</option>' : '<option value="Owner" disabled' + (sel ? ' selected' : '') + '>Owner (locked)</option>'; }
   var POS = ['Server','Cook','Kitchen Prep','Dishwasher','Delivery Driver','Cashier','Manager','Other'];
@@ -1014,20 +1014,20 @@
       + (sub ? '<p class="text-muted-foreground" style="margin:2px 0 0;font-size:12px">' + sub + '</p>' : '') + '</div><div style="padding:14px 16px">' + body + '</div></div>';
   }
   function toast(msg){ var t = document.createElement('div'); t.textContent = msg; t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:999999'; document.body.appendChild(t); setTimeout(function(){ t.remove(); }, 2200); }
-  function ownerPin(who, cb){
+  function ownerPin(who, cb, mode){
     var dark = document.documentElement.classList.contains('dark');
     var bg = dark ? '#1a1a1a' : '#fff', fg = dark ? '#f5f5f5' : '#111827', mu = dark ? '#9ca3af' : '#6b7280', bd = dark ? '#333' : '#e5e7eb';
     var d = document.createElement('div');
     d.innerHTML = '<div id="st_op" style="position:fixed;inset:0;z-index:1000000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;font-family:Inter,system-ui,sans-serif"><div style="background:' + bg + ';color:' + fg + ';border-radius:14px;padding:20px;width:100%;max-width:340px">'
-      + '<p style="margin:0 0 4px;font-size:17px;font-weight:700">Owner PIN required</p><p style="margin:0 0 14px;font-size:13px;color:' + mu + '">Enter the owner PIN to unlock the Owner option' + (who ? ' for ' + esc(who) : '') + '.</p>'
+      + '<p style="margin:0 0 4px;font-size:17px;font-weight:700">' + (mode === 'any' ? 'Manager or owner PIN required' : 'Owner PIN required') + '</p><p style="margin:0 0 14px;font-size:13px;color:' + mu + '">' + (mode === 'any' ? 'A manager or owner PIN unlocks Manager. The owner PIN (2016) unlocks Owner too.' : 'Enter the owner PIN to unlock the Owner option' + (who ? ' for ' + esc(who) : '') + '.') + '</p>'
       + '<input id="st_op_pin" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="\u2022\u2022\u2022\u2022" style="display:block;width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid ' + bd + ';border-radius:8px;background:transparent;color:' + fg + ';font-size:16px;letter-spacing:4px">'
-      + '<p id="st_op_err" style="display:none;margin:6px 0 0;color:#dc2626;font-size:12px">Incorrect owner PIN</p>'
+      + '<p id="st_op_err" style="display:none;margin:6px 0 0;color:#dc2626;font-size:12px">Incorrect PIN</p>'
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px"><button id="st_op_cancel" style="padding:10px;border-radius:8px;border:1px solid ' + bd + ';background:transparent;color:' + fg + ';font-size:14px;font-weight:600;cursor:pointer">Cancel</button><button id="st_op_ok" style="padding:10px;border-radius:8px;border:none;background:#0d1b34;color:#fff;font-size:14px;font-weight:600;cursor:pointer">Confirm</button></div></div></div>';
     var m = d.firstElementChild; document.body.appendChild(m);
     var inp = m.querySelector('#st_op_pin'); setTimeout(function(){ inp.focus(); }, 50);
     var done = false;
     function close(ok){ if (done) return; done = true; m.remove(); cb(ok); }
-    function go(){ if (inp.value.trim() === PIN) close(true); else { m.querySelector('#st_op_err').style.display = 'block'; inp.value = ''; inp.focus(); } }
+    function go(){ var v = inp.value.trim(); if (v === PIN) close('owner'); else if (mode === 'any' && window.__checkMgrPin__(v).ok) close('manager'); else { m.querySelector('#st_op_err').style.display = 'block'; inp.value = ''; inp.focus(); } }
     m.querySelector('#st_op_ok').onclick = go; m.querySelector('#st_op_cancel').onclick = function(){ close(false); };
     inp.onkeydown = function(e){ if (e.key === 'Enter') go(); };
     m.onclick = function(e){ if (e.target === m) close(false); };
@@ -1045,7 +1045,7 @@
       h += '<div style="' + (full ? 'grid-column:1/-1' : '') + '">' + lab + inner + '</div>';
     });
     var needPin = !editingId;
-    if (!editingId) h += '<div><label style="font-size:12px;font-weight:600">Role</label><select name="role" ' + IN + '><option>Employee</option>' + ownOpt(false) + '</select>' + (ownerOk ? '' : '<button type="button" data-ownunlock="" ' + UNL + '>Enter owner PIN to unlock Owner</button>') + '</div>';
+    if (!editingId) h += '<div><label style="font-size:12px;font-weight:600">Role</label><select name="role" ' + IN + '><option>Employee</option>' + (formLvl ? '<option value="Manager">Manager</option>' : '<option value="Manager" disabled>Manager (locked)</option>') + (formLvl === 'owner' ? '<option value="Owner">Owner</option>' : '<option value="Owner" disabled>Owner (locked)</option>') + '</select>' + (formLvl === 'owner' ? '' : '<button type="button" id="st_formunlock" ' + UNL + '>' + (formLvl ? 'Enter owner PIN to unlock Owner' : 'Enter PIN to unlock Manager / Owner') + '</button>') + '</div>';
     h += '<div><label style="font-size:12px;font-weight:600">' + (needPin ? 'Choose a PIN (4\u20136 digits) <span style="color:#dc2626">*</span>' : 'New PIN (leave blank to keep current)') + '</label><input name="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password" placeholder="\u2022\u2022\u2022\u2022" ' + IN + '></div>'
       + '<div><label style="font-size:12px;font-weight:600">Confirm PIN' + (needPin ? ' <span style="color:#dc2626">*</span>' : '') + '</label><input name="pin2" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password" placeholder="\u2022\u2022\u2022\u2022" ' + IN + '></div>';
     h += '</div><p class="text-muted-foreground" style="font-size:11px;margin:12px 0">Remember your PIN \u2014 you\u2019ll use it to update your info. Please don\u2019t enter your SIN or banking details here \u2014 give those to the manager directly.</p>'
@@ -1123,11 +1123,12 @@
           editingId = null; selfEdit = false; save(list); toast('Staff info updated'); rr(); return;
         }
         rec.id = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2,6); rec.createdAt = new Date().toISOString(); rec.pinHash = ph; rec.role = 'Employee';
-        var finish = function(){ var l2 = load(); l2.push(rec); save(l2); toast('Thanks ' + rec.first + ' \u2014 your info was saved' + (rec.role === 'Owner' ? ' as an Owner' : '')); ownerOk = false; rr(); };
-        if (String(fd.get('role') || '') === 'Owner' && ownerOk) rec.role = 'Owner';
+        var finish = function(){ var l2 = load(); l2.push(rec); save(l2); toast('Thanks ' + rec.first + ' \u2014 your info was saved' + (rec.role !== 'Employee' ? ' as ' + (rec.role === 'Owner' ? 'an ' : 'a ') + rec.role : '')); formLvl = ''; rr(); };
+        var rq = String(fd.get('role') || ''); if (rq === 'Owner' && formLvl === 'owner') rec.role = 'Owner'; else if (rq === 'Manager' && formLvl) rec.role = 'Manager';
         finish();
       });
     };
+    if ($('st_formunlock')) $('st_formunlock').onclick = function(){ var btn = $('st_formunlock'); ownerPin('', function(lvl){ if (!lvl) return; if (lvl === 'owner' || !formLvl) formLvl = lvl; var sel = root.querySelector('#st_form [name="role"]'); if (!sel) return; sel.querySelectorAll('option').forEach(function(o){ if (o.value === 'Manager' || (o.value === 'Owner' && formLvl === 'owner')) { o.disabled = false; o.textContent = o.value; } }); if (formLvl === 'owner') btn.remove(); else btn.textContent = 'Enter owner PIN to unlock Owner'; toast(formLvl === 'owner' ? 'Manager & Owner unlocked' : 'Manager unlocked'); }, 'any'); };
     root.querySelectorAll('[data-ownunlock]').forEach(function(b){ b.onclick = function(){ ownerPin(b.getAttribute('data-ownunlock'), function(ok){ if (!ok) return; ownerOk = true; root.querySelectorAll('option[value="Owner"]').forEach(function(o){ o.disabled = false; o.textContent = 'Owner'; }); root.querySelectorAll('[data-ownunlock]').forEach(function(x){ x.remove(); }); toast('Owner option unlocked'); }); }; });
     if ($('st_cancel')) $('st_cancel').onclick = function(){ editingId = null; selfEdit = false; rr(); };
     if ($('st_myopen')) {
@@ -1139,7 +1140,7 @@
       $('st_unlock').onclick = go; $('st_pin').onkeydown = function(e){ if (e.key === 'Enter') go(); };
     }
     if (!unlocked) return;
-    $('st_lock').onclick = function(){ unlocked = false; me = null; ownerOk = false; editingId = null; selfEdit = false; openId = null; rr(); };
+    $('st_lock').onclick = function(){ unlocked = false; me = null; ownerOk = false; formLvl = ''; editingId = null; selfEdit = false; openId = null; rr(); };
     $('st_q').oninput = function(e){ q = e.target.value; var pos = e.target.selectionStart; setTimeout(function(){ render(root); var n = root.querySelector('#st_q'); if (n) { n.focus(); try { n.setSelectionRange(pos,pos); } catch(x) {} } }, 0); };
     root.querySelectorAll('[data-open]').forEach(function(b){ b.onclick = function(){ var id = b.getAttribute('data-open'); openId = openId === id ? null : id; rr(); }; });
     root.querySelectorAll('[data-edit]').forEach(function(b){ b.onclick = function(){ var tx = load().find(function(y){ return y.id === b.getAttribute('data-edit'); }); if (tx && tx.role === 'Owner' && !(me && me.role === 'Owner')) { toast('Only an owner can edit an owner'); return; } editingId = b.getAttribute('data-edit'); selfEdit = false; rr(); var y = root.closest('.overflow-y-auto'); if (y) y.scrollTop = 0; }; });
