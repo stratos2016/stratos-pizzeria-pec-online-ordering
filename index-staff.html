@@ -14,13 +14,17 @@
   window.__MENU_DATA_REF__ = MENU_DATA;
 
   (function(){
-    var SEED_V = 2;
+    var SEED_V = 3;
     var ADDONS = [
       {id:1001,name:"Handheld Add-On: Fries",category:"Add-Ons",description:"Add fries to a burger, sandwich or pita",price:4,available:true,sortOrder:1},
       {id:1002,name:"Handheld Add-On: Onion Rings",category:"Add-Ons",description:"Add onion rings to a burger, sandwich or pita",price:4.75,available:true,sortOrder:2},
       {id:1003,name:"Handheld Add-On: Poutine",category:"Add-Ons",description:"Add poutine to a burger, sandwich or pita",price:11.5,available:true,sortOrder:3},
       {id:1004,name:"Tenders Upgrade: Onion Rings",category:"Add-Ons",description:"Swap tenders fries for onion rings (upcharge)",price:3,available:true,sortOrder:4},
-      {id:1005,name:"Tenders Upgrade: Poutine",category:"Add-Ons",description:"Swap tenders fries for poutine (upcharge)",price:5.5,available:true,sortOrder:5}
+      {id:1005,name:"Tenders Upgrade: Poutine",category:"Add-Ons",description:"Swap tenders fries for poutine (upcharge)",price:5.5,available:true,sortOrder:5},
+      {id:1006,name:"Handheld Add-On: Hot Peppers",category:"Add-Ons",description:"Add hot peppers to a burger, sandwich or pita",price:0.25,available:true,sortOrder:6},
+      {id:1007,name:"Pita Add-On: Extra Tzatziki",category:"Add-Ons",description:"Extra tzatziki on a Souvlaki or Gyro Pita",price:1,available:true,sortOrder:7},
+      {id:1008,name:"Pita Add-On: Feta",category:"Add-Ons",description:"Add feta to a Souvlaki or Gyro Pita",price:2.5,available:true,sortOrder:8},
+      {id:1009,name:"Gyro Add-On: Extra Meat",category:"Add-Ons",description:"Extra gyro meat on a Gyro Pita",price:4.5,available:true,sortOrder:9}
     ];
     try {
       var saved = JSON.parse(localStorage.getItem('stratos_menu') || 'null');
@@ -39,6 +43,10 @@
   })();
   window.__saveMenu__ = function(){ try { localStorage.setItem('stratos_menu', JSON.stringify(MENU_DATA)); } catch(e) {} };
   function __addon__(name){ return MENU_DATA.find(function(i){ return i.name === name; }); }
+  window.__addonOpt__ = function(label, db, fb){
+    var it = __addon__(db); if (it && it.available === false) return [];
+    return [{name: label, price: it ? Number(it.price) : fb}];
+  };
   window.__sideAddons__ = function(){
     return [["Add Fries","Handheld Add-On: Fries",4],["Add Onion Rings","Handheld Add-On: Onion Rings",4.75],["Add Poutine","Handheld Add-On: Poutine",11.5]]
       .filter(function(r){ var it=__addon__(r[1]); return !it || it.available !== false; })
