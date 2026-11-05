@@ -684,7 +684,7 @@
   function money(n){ return '$' + (Number(n)||0).toFixed(2); }
   function D(){ return window.__DELIVERY__; }
   function save(){ window.__saveDelivery__ && window.__saveDelivery__(); }
-  var INPUT = 'class="bg-background text-foreground border border-border"';
+  var INPUT = 'class="bg-background text-foreground border border-border dl-in"';
   var BTN = 'class="bg-primary text-primary-foreground" style="border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer"';
   var BTN2 = 'class="border border-border text-foreground" style="background:transparent;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer"';
   function toggle(on, attrs){
@@ -704,6 +704,11 @@
     var h = '<div style="padding:20px;max-width:900px">';
     h += '<h1 class="font-serif text-2xl" style="margin:0 0 4px">Delivery</h1>';
     h += '<p class="text-muted-foreground" style="margin:0 0 16px;font-size:13px">Delivery area: Barcovan Beach Rd (NW) to Hwy 62 (E), Wellington (S), cut off at County Rd 40 / Wooler Rd in Carrying Place (N). Customers must pick a street from this list to order delivery.</p>';
+    h += '<details open class="bg-card border border-border rounded-xl" style="margin-bottom:16px;overflow:hidden">'
+      + '<summary class="border-b border-border bg-muted/30" style="padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer">Delivery Area Map</summary>'
+      + '<a href="./assets/delivery-area-map.jpg" target="_blank" rel="noopener" style="display:block;background:#fff"><img src="./assets/delivery-area-map.jpg" alt="Map of the delivery area with streets coloured by community" style="display:block;width:100%;height:auto"></a>'
+      + '<p class="text-muted-foreground" style="margin:0;padding:8px 16px 10px;font-size:11px">Streets are coloured by community. Tap the map to open it full size. Current fees are in the list below.</p>'
+      + '</details>';
     // PIN bar
     if (!unlocked) {
       h += '<div class="bg-muted/30 border border-border rounded-xl" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;margin-bottom:16px">'
@@ -717,10 +722,10 @@
     // Settings
     var sb = '<div style="display:flex;flex-direction:column;gap:12px">'
       + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><p style="margin:0;font-size:13px;font-weight:600">Delivery available</p><p class="text-muted-foreground" style="margin:0;font-size:12px">Turn off to hide the Delivery option for customers</p></div>' + toggle(d.enabled !== false, 'id="dl_enabled"' + dis) + '</div>'
-      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><p style="margin:0;font-size:13px;font-weight:600">Minimum order for delivery</p><p class="text-muted-foreground" style="margin:0;font-size:12px">Food subtotal before tax. 0 = no minimum</p></div><input id="dl_min" type="number" step="0.01" min="0" value="' + (Number(d.minOrder)||0).toFixed(2) + '" ' + INPUT + ' style="width:100px;border-radius:6px;padding:6px 8px;font-size:13px"' + dis + '></div>'
-      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><p style="margin:0;font-size:13px;font-weight:600">Free delivery over</p><p class="text-muted-foreground" style="margin:0;font-size:12px">Food subtotal before tax. 0 = never free</p></div><input id="dl_free" type="number" step="0.01" min="0" value="' + (Number(d.freeOver)||0).toFixed(2) + '" ' + INPUT + ' style="width:100px;border-radius:6px;padding:6px 8px;font-size:13px"' + dis + '></div>'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><p style="margin:0;font-size:13px;font-weight:600">Minimum order for delivery</p><p class="text-muted-foreground" style="margin:0;font-size:12px">Food subtotal before tax. 0 = no minimum</p></div><input id="dl_min" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0.00" value="' + (Number(d.minOrder) ? Number(d.minOrder).toFixed(2) : '') + '" ' + INPUT + ' style="width:100px;border-radius:6px;padding:6px 8px;font-size:13px"' + dis + '></div>'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><p style="margin:0;font-size:13px;font-weight:600">Free delivery over</p><p class="text-muted-foreground" style="margin:0;font-size:12px">Food subtotal before tax. 0 = never free</p></div><input id="dl_free" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0.00" value="' + (Number(d.freeOver) ? Number(d.freeOver).toFixed(2) : '') + '" ' + INPUT + ' style="width:100px;border-radius:6px;padding:6px 8px;font-size:13px"' + dis + '></div>'
       + '</div>';
-    h += card('Delivery Settings', sb);
+    h += card('Delivery Settings', sb, unlocked ? 'Type a new amount, then tap Done / Enter or tap outside the box to save.' : 'Locked \u2014 enter the manager PIN above to make changes.');
     // Communities
     var cb = '<div style="display:flex;flex-direction:column">';
     d.communities.forEach(function(c, i){
@@ -761,7 +766,7 @@
     }
     h += card('Street Database', stb, 'Built from OpenStreetMap road data for the delivery area. Add any missing private lanes, or turn off streets you don\u2019t want to deliver to.');
     h += '</div>';
-    root.innerHTML = h;
+    root.innerHTML = '<style>.dl-in:disabled{opacity:.55;cursor:not-allowed}</style>' + h;
     wire(root);
   }
   function toast(msg){
@@ -784,9 +789,13 @@
     if ($('dl_prev')) $('dl_prev').onclick = function(){ state.page--; rerender(); };
     if ($('dl_next')) $('dl_next').onclick = function(){ state.page++; rerender(); };
     if (!unlocked) return;
+    root.querySelectorAll('input[type=number]').forEach(function(el){
+      el.addEventListener('focus', function(){ var t = el; setTimeout(function(){ try { t.select(); } catch(x) {} }, 0); });
+      el.addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); el.blur(); } });
+    });
     $('dl_enabled').onclick = function(){ d.enabled = !(d.enabled !== false); save(); rerender(); toast(d.enabled ? 'Delivery turned on' : 'Delivery turned off'); };
-    $('dl_min').onchange = function(e){ d.minOrder = Math.max(0, Math.round((parseFloat(e.target.value)||0)*100)/100); save(); rerender(); toast('Minimum order saved'); };
-    $('dl_free').onchange = function(e){ d.freeOver = Math.max(0, Math.round((parseFloat(e.target.value)||0)*100)/100); save(); rerender(); toast('Free delivery threshold saved'); };
+    $('dl_min').onchange = function(e){ d.minOrder = Math.max(0, Math.round((parseFloat(e.target.value)||0)*100)/100); save(); rerender(); toast(d.minOrder > 0 ? 'Delivery minimum: ' + money(d.minOrder) : 'No delivery minimum'); };
+    $('dl_free').onchange = function(e){ d.freeOver = Math.max(0, Math.round((parseFloat(e.target.value)||0)*100)/100); save(); rerender(); toast(d.freeOver > 0 ? 'Free delivery over ' + money(d.freeOver) : 'Free delivery off'); };
     root.querySelectorAll('[data-fee]').forEach(function(el){ el.onchange = function(){ var c = d.communities[+el.getAttribute('data-fee')]; c.fee = Math.max(0, Math.round((parseFloat(el.value)||0)*100)/100); save(); rerender(); toast(c.name + ' fee: ' + money(c.fee)); }; });
     root.querySelectorAll('[data-cact]').forEach(function(el){ el.onclick = function(){ var c = d.communities[+el.getAttribute('data-cact')]; c.active = !(c.active !== false); save(); rerender(); }; });
     root.querySelectorAll('[data-cdel]').forEach(function(el){ el.onclick = function(){
