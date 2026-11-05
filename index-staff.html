@@ -390,6 +390,7 @@
   var addItemPinUnlocked = false;
 
   function injectAddItemForm() {
+    var _b=document.getElementById('__add_item_bar__'); if(_b) _b.remove(); return;
     // Use a fixed overlay bar that doesn't affect DOM layout at all
     var existing = document.getElementById('__add_item_bar__');
     var onMenuTab = document.querySelectorAll('[data-testid^="avail-item"]').length > 0;
@@ -459,6 +460,7 @@
     }
   }
 
+  window.__showAddItemModal__ = function(){ showAddItemModal(); };
   function showAddItemModal() {
     if (document.getElementById('__add_item_modal__')) return;
     var isDark = document.documentElement.classList.contains('dark');
