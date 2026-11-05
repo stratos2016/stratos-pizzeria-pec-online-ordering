@@ -760,8 +760,8 @@
     // Settings
     var sb = '<div style="display:flex;flex-direction:column;gap:12px">'
       + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><p style="margin:0;font-size:13px;font-weight:600">Delivery available</p><p class="text-muted-foreground" style="margin:0;font-size:12px">Turn off to hide the Delivery option for customers</p></div>' + toggle(d.enabled !== false, 'id="dl_enabled"' + dis) + '</div>'
-      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><p style="margin:0;font-size:13px;font-weight:600">Minimum order for delivery</p><p class="text-muted-foreground" style="margin:0;font-size:12px">Food subtotal before tax. 0 = no minimum</p></div><input id="dl_min" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0.00" value="' + (Number(d.minOrder) ? Number(d.minOrder).toFixed(2) : '') + '" ' + INPUT + ' style="width:100px;border-radius:6px;padding:6px 8px;font-size:13px"' + dis + '></div>'
-      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><p style="margin:0;font-size:13px;font-weight:600">Free delivery over</p><p class="text-muted-foreground" style="margin:0;font-size:12px">Food subtotal before tax. 0 = never free</p></div><input id="dl_free" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0.00" value="' + (Number(d.freeOver) ? Number(d.freeOver).toFixed(2) : '') + '" ' + INPUT + ' style="width:100px;border-radius:6px;padding:6px 8px;font-size:13px"' + dis + '></div>'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><p style="margin:0;font-size:13px;font-weight:600">Minimum order for delivery</p><p class="text-muted-foreground" style="margin:0;font-size:12px">Food subtotal before tax. 0 = no minimum</p></div><input id="dl_min" type="text" data-num="1" autocomplete="off" inputmode="decimal" placeholder="0.00" value="' + (Number(d.minOrder) ? Number(d.minOrder).toFixed(2) : '') + '" ' + INPUT + ' style="width:100px;border-radius:6px;padding:6px 8px;font-size:13px"' + dis + '></div>'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><p style="margin:0;font-size:13px;font-weight:600">Free delivery over</p><p class="text-muted-foreground" style="margin:0;font-size:12px">Food subtotal before tax. 0 = never free</p></div><input id="dl_free" type="text" data-num="1" autocomplete="off" inputmode="decimal" placeholder="0.00" value="' + (Number(d.freeOver) ? Number(d.freeOver).toFixed(2) : '') + '" ' + INPUT + ' style="width:100px;border-radius:6px;padding:6px 8px;font-size:13px"' + dis + '></div>'
       + '</div>';
     h += card('Delivery Settings', sb, unlocked ? 'Type a new amount, then tap Done / Enter or tap outside the box to save.' : 'Locked \u2014 enter the manager PIN above to make changes.');
     // Communities
@@ -769,13 +769,13 @@
     d.communities.forEach(function(c, i){
       cb += '<div class="border-b border-border" style="display:flex;align-items:center;gap:8px;padding:8px 0">'
         + '<div style="flex:1;min-width:110px"><p style="margin:0;font-size:13px;font-weight:600">' + esc(c.name) + '</p><p class="text-muted-foreground" style="margin:0;font-size:11px">' + (c.km != null ? '~' + c.km + ' km \u00b7 ' : '') + (counts[c.name]||0) + ' streets</p></div>'
-        + '<span class="text-muted-foreground" style="font-size:13px">$</span><input data-fee="' + i + '" type="number" step="0.01" min="0" inputmode="decimal" value="' + (Number(c.fee)||0).toFixed(2) + '" ' + INPUT + ' style="width:72px;border-radius:6px;padding:6px 8px;font-size:13px"' + dis + '>'
+        + '<span class="text-muted-foreground" style="font-size:13px">$</span><input data-fee="' + i + '" type="text" data-num="1" autocomplete="off" inputmode="decimal" value="' + (Number(c.fee)||0).toFixed(2) + '" ' + INPUT + ' style="width:72px;border-radius:6px;padding:6px 8px;font-size:13px"' + dis + '>'
         + toggle(c.active !== false, 'data-cact="' + i + '"' + dis)
         + (unlocked ? '<button data-cdel="' + i + '" title="Remove community" style="background:none;border:none;color:#dc2626;font-size:16px;cursor:pointer;padding:0 4px">\u2715</button>' : '')
         + '</div>';
     });
     cb += '</div>';
-    if (unlocked) cb += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><input id="dl_new_c" placeholder="New community name" ' + INPUT + ' style="flex:1;min-width:160px;border-radius:6px;padding:6px 8px;font-size:13px"><input id="dl_new_cfee" type="number" step="0.01" min="0" placeholder="Fee" ' + INPUT + ' style="width:84px;border-radius:6px;padding:6px 8px;font-size:13px"><button id="dl_add_c" ' + BTN + '>+ Add Community</button></div>';
+    if (unlocked) cb += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><input id="dl_new_c" placeholder="New community name" ' + INPUT + ' style="flex:1;min-width:160px;border-radius:6px;padding:6px 8px;font-size:13px"><input id="dl_new_cfee" type="text" inputmode="decimal" data-num="1" autocomplete="off" placeholder="Fee" ' + INPUT + ' style="width:84px;border-radius:6px;padding:6px 8px;font-size:13px"><button id="dl_add_c" ' + BTN + '>+ Add Community</button></div>';
     h += card('Delivery Fees by Community', cb, 'Each street belongs to a community. The customer pays that community\u2019s fee. Toggle off to stop delivering there.');
     // Streets
     var q = state.q.toLowerCase();
@@ -785,7 +785,7 @@
     var PER = 40, pages = Math.max(1, Math.ceil(list.length / PER)); if (state.page >= pages) state.page = pages - 1;
     var shown = list.slice(state.page * PER, state.page * PER + PER);
     var commOpts = function(sel){ return d.communities.map(function(c){ return '<option value="' + esc(c.name) + '"' + (c.name === sel ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join(''); };
-    var NUM = 'type="number" inputmode="numeric" min="0" step="1" ' + INPUT + ' style="width:64px;border-radius:6px;padding:4px 5px;font-size:12px"';
+    var NUM = 'type="text" inputmode="numeric" pattern="[0-9]*" data-num="1" autocomplete="off" ' + INPUT + ' style="width:64px;border-radius:6px;padding:4px 5px;font-size:12px"';
     var stb = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><input id="dl_q" placeholder="Search streets..." value="' + esc(state.q) + '" ' + INPUT + ' style="flex:1;min-width:160px;border-radius:6px;padding:6px 8px;font-size:13px">'
       + '<select id="dl_fc" ' + INPUT + ' style="border-radius:6px;padding:6px 8px;font-size:13px"><option value="">All communities</option>' + commOpts(state.comm) + '</select></div>';
     stb += '<p class="text-muted-foreground" style="margin:0 0 6px;font-size:12px">' + list.length + ' of ' + d.streets.length + ' streets</p>';
@@ -845,14 +845,14 @@
     if ($('dl_prev')) $('dl_prev').onclick = function(){ state.page--; rerender(); };
     if ($('dl_next')) $('dl_next').onclick = function(){ state.page++; rerender(); };
     if (!unlocked) return;
-    root.querySelectorAll('input[type=number]').forEach(function(el){
+    root.querySelectorAll('input[data-num]').forEach(function(el){
       el.addEventListener('focus', function(){ var t = el; try { t.select(); } catch(x) {} }); el.addEventListener('mouseup', function(e){ e.preventDefault(); });
       el.addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); el.blur(); } });
     });
     $('dl_enabled').onclick = function(){ d.enabled = !(d.enabled !== false); save(); rerender(); toast(d.enabled ? 'Delivery turned on' : 'Delivery turned off'); };
-    $('dl_min').onchange = function(e){ d.minOrder = Math.max(0, Math.round((parseFloat(e.target.value)||0)*100)/100); save(); rerender(); toast(d.minOrder > 0 ? 'Delivery minimum: ' + money(d.minOrder) : 'No delivery minimum'); };
-    $('dl_free').onchange = function(e){ d.freeOver = Math.max(0, Math.round((parseFloat(e.target.value)||0)*100)/100); save(); rerender(); toast(d.freeOver > 0 ? 'Free delivery over ' + money(d.freeOver) : 'Free delivery off'); };
-    root.querySelectorAll('[data-fee]').forEach(function(el){ el.onchange = function(){ var c = d.communities[+el.getAttribute('data-fee')]; c.fee = Math.max(0, Math.round((parseFloat(el.value)||0)*100)/100); save(); rerender(); toast(c.name + ' fee: ' + money(c.fee)); }; });
+    $('dl_min').onchange = function(e){ d.minOrder = Math.max(0, Math.round((parseFloat(String(e.target.value).replace(/[^0-9.]/g,''))||0)*100)/100); save(); rerender(); toast(d.minOrder > 0 ? 'Delivery minimum: ' + money(d.minOrder) : 'No delivery minimum'); };
+    $('dl_free').onchange = function(e){ d.freeOver = Math.max(0, Math.round((parseFloat(String(e.target.value).replace(/[^0-9.]/g,''))||0)*100)/100); save(); rerender(); toast(d.freeOver > 0 ? 'Free delivery over ' + money(d.freeOver) : 'Free delivery off'); };
+    root.querySelectorAll('[data-fee]').forEach(function(el){ el.onchange = function(){ var c = d.communities[+el.getAttribute('data-fee')]; c.fee = Math.max(0, Math.round((parseFloat(String(el.value).replace(/[^0-9.]/g,''))||0)*100)/100); save(); rerender(); toast(c.name + ' fee: ' + money(c.fee)); }; });
     root.querySelectorAll('[data-cact]').forEach(function(el){ el.onclick = function(){ var c = d.communities[+el.getAttribute('data-cact')]; c.active = !(c.active !== false); save(); rerender(); }; });
     root.querySelectorAll('[data-cdel]').forEach(function(el){ el.onclick = function(){
       var i = +el.getAttribute('data-cdel'), c = d.communities[i];
@@ -861,14 +861,14 @@
       d.streets.forEach(function(s){ s.r = (s.r||[]).filter(function(r){ return r[2] !== c.name; }); }); d.streets = d.streets.filter(function(s){ return s.r.length; }); d.communities.splice(i, 1); save(); rerender();
     }; });
     $('dl_add_c').onclick = function(){
-      var name = $('dl_new_c').value.trim(), fee = parseFloat($('dl_new_cfee').value);
+      var name = $('dl_new_c').value.trim(), fee = parseFloat(String($('dl_new_cfee').value).replace(/[^0-9.]/g,''));
       if (!name) return toast('Enter a community name');
       if (d.communities.some(function(c){ return c.name.toLowerCase() === name.toLowerCase(); })) return toast('That community already exists');
       d.communities.push({name:name, fee: isNaN(fee) ? 0 : Math.round(fee*100)/100, active:true}); save(); rerender(); toast(name + ' added');
     };
     function rk(el, attr){ var p = el.getAttribute(attr).split(':'); return {s:d.streets[+p[0]], k:+p[1]}; }
-    root.querySelectorAll('[data-rlo]').forEach(function(el){ el.onchange = function(){ var o = rk(el,'data-rlo'), v = parseInt(el.value,10); if (isNaN(v)) return rerender(); o.s.r[o.k][0] = v; if (o.s.r[o.k][1] < v) o.s.r[o.k][1] = v; o.s.r.sort(function(a,b){ return a[0]-b[0]; }); save(); rerender(); toast('Range saved'); }; });
-    root.querySelectorAll('[data-rhi]').forEach(function(el){ el.onchange = function(){ var o = rk(el,'data-rhi'), v = parseInt(el.value,10); if (isNaN(v)) return rerender(); o.s.r[o.k][1] = v; if (o.s.r[o.k][0] > v) o.s.r[o.k][0] = v; save(); rerender(); toast('Range saved'); }; });
+    root.querySelectorAll('[data-rlo]').forEach(function(el){ el.onchange = function(){ var o = rk(el,'data-rlo'), v = parseInt(String(el.value).replace(/[^0-9]/g,''),10); if (isNaN(v)) return rerender(); o.s.r[o.k][0] = v; if (o.s.r[o.k][1] < v) o.s.r[o.k][1] = v; o.s.r.sort(function(a,b){ return a[0]-b[0]; }); save(); rerender(); toast('Range saved'); }; });
+    root.querySelectorAll('[data-rhi]').forEach(function(el){ el.onchange = function(){ var o = rk(el,'data-rhi'), v = parseInt(String(el.value).replace(/[^0-9]/g,''),10); if (isNaN(v)) return rerender(); o.s.r[o.k][1] = v; if (o.s.r[o.k][0] > v) o.s.r[o.k][0] = v; save(); rerender(); toast('Range saved'); }; });
     root.querySelectorAll('[data-rc]').forEach(function(el){ el.onchange = function(){ var o = rk(el,'data-rc'); o.s.r[o.k][2] = el.value; save(); rerender(); toast(o.s.s + ' #' + o.s.r[o.k][0] + '\u2013' + o.s.r[o.k][1] + ' \u2192 ' + el.value); }; });
     root.querySelectorAll('[data-rdel]').forEach(function(el){ el.onclick = function(){ var o = rk(el,'data-rdel'); if (o.s.r.length === 1) { toast('A street needs at least one range \u2014 delete the street instead'); return; } o.s.r.splice(o.k,1); save(); rerender(); }; });
     root.querySelectorAll('[data-radd]').forEach(function(el){ el.onclick = function(){ var s = d.streets[+el.getAttribute('data-radd')]; var last = s.r[s.r.length-1]; var start = last ? last[1] + 1 : 1; s.r.push([start, start + 500, last ? last[2] : d.communities[0].name]); save(); rerender(); }; });
