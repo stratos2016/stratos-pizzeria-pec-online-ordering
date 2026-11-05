@@ -951,7 +951,7 @@
       + '<p style="margin:0 0 4px;font-size:17px;font-weight:700">' + opts.title + '</p>'
       + '<p style="margin:0 0 14px;font-size:13px;color:' + mu + '">' + opts.sub + '</p>'
       + (opts.reason ? '<label style="font-size:12px;font-weight:600">Reason (optional)</label><input id="__oa_reason" maxlength="120" placeholder="e.g. Customer cancelled" style="display:block;width:100%;box-sizing:border-box;margin:4px 0 12px;padding:9px 10px;border:1px solid ' + bd + ';border-radius:8px;background:transparent;color:' + fg + ';font-size:14px">' : '')
-      + '<label style="font-size:12px;font-weight:600">Manager or owner PIN</label><input id="__oa_pin" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="\u2022\u2022\u2022\u2022" style="display:block;width:100%;box-sizing:border-box;margin:4px 0 6px;padding:9px 10px;border:1px solid ' + bd + ';border-radius:8px;background:transparent;color:' + fg + ';font-size:16px;letter-spacing:4px">'
+      + '<label style="font-size:12px;font-weight:600">Owner PIN</label><input id="__oa_pin" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="\u2022\u2022\u2022\u2022" style="display:block;width:100%;box-sizing:border-box;margin:4px 0 6px;padding:9px 10px;border:1px solid ' + bd + ';border-radius:8px;background:transparent;color:' + fg + ';font-size:16px;letter-spacing:4px">'
       + '<p id="__oa_err" style="display:none;margin:0 0 6px;color:#dc2626;font-size:12px">Incorrect PIN</p>'
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">'
       + '<button id="__oa_cancel" style="padding:10px;border-radius:8px;border:1px solid ' + bd + ';background:transparent;color:' + fg + ';font-size:14px;font-weight:600;cursor:pointer">Cancel</button>'
@@ -962,7 +962,8 @@
     function close(){ m.remove(); }
     function go(){
       var chk = window.__checkMgrPin__(pin.value);
-      if (!chk.ok) { var er = m.querySelector('#__oa_err'); er.textContent = chk.employee ? 'Employee PINs can\u2019t do this \u2014 a manager or owner PIN is needed' : 'Incorrect PIN'; er.style.display = 'block'; pin.value = ''; pin.focus(); return; }
+      if (chk.ok && chk.role !== 'Owner') chk = {ok:false, notOwner:true};
+      if (!chk.ok) { var er = m.querySelector('#__oa_err'); er.textContent = (chk.employee || chk.notOwner) ? 'Only an owner PIN can void or delete orders' : 'Incorrect PIN'; er.style.display = 'block'; pin.value = ''; pin.focus(); return; }
       var r = m.querySelector('#__oa_reason'); close(); cb(r ? r.value.trim() : '', chk);
     }
     m.querySelector('#__oa_cancel').onclick = close;
