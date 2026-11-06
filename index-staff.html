@@ -1327,6 +1327,141 @@
 })();
 
 </script>
+<script>
+(function(){
+  var KEY = 'stratos_printer';
+  var PRESETS = {
+    tmu220:   {label: 'Epson TM-U220B \u2014 76 mm, 40 characters (factory setting)', paperMm: 76, printMm: 63.4, cols: 40, feed: 3, bold: true},
+    tmu220_42:{label: 'Epson TM-U220B \u2014 76 mm, 42 characters (DIP switch 2-1 ON)', paperMm: 76, printMm: 63.4, cols: 42, feed: 3, bold: true},
+    t80:      {label: '80 mm thermal printer (TM-T20, TM-T88, etc.)', paperMm: 80, printMm: 72, cols: 42, feed: 2, bold: false},
+    t58:      {label: '58 mm thermal printer', paperMm: 58, printMm: 48, cols: 32, feed: 2, bold: false},
+    custom:   {label: 'Custom', paperMm: 76, printMm: 63.4, cols: 40, feed: 3, bold: false}
+  };
+  var DEF = {
+    preset: 'tmu220', paperMm: 76, printMm: 63.4, cols: 40, sizePct: 100, lineH: 1.3, bold: true, feed: 3, copies: 1,
+    printOnAccept: true, autoPrint: false, autoClose: true, prices: true,
+    header: ['Stratos Pizzeria & Restaurant', '20018 Loyalist Parkway', 'Consecon         ON   KOK1t0'],
+    footer: ['We appreciate your comments:', '(613) 394-3000', 'OPEN 5 DAYS A WEEK. SEE YOU AGAIN!']
+  };
+  function load(){ var c = {}; try { c = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch(e) {} return Object.assign({}, DEF, c); }
+  function save(c){ try { localStorage.setItem(KEY, JSON.stringify(c)); } catch(e) {} }
+  // Courier character width = 0.6em; 1px = 0.2646mm
+  function fitPx(c){ return Math.round((c.printMm / (c.cols * 0.6 * 0.2646)) * 0.97 * (c.sizePct / 100) * 10) / 10; }
+  window.__printerCfg__ = function(){
+    var c = load();
+    return {cols: c.cols, paperMm: c.paperMm, contentMm: c.printMm, marginMm: 0, fontPx: fitPx(c), lineH: c.lineH, bold: c.bold, feed: c.feed,
+      copies: c.copies, printOnAccept: c.printOnAccept, autoPrint: c.autoPrint, autoClose: c.autoClose, prices: c.prices,
+      header: c.header, footer: c.footer};
+  };
+
+  var unlocked = false;
+  function esc(x){ return String(x == null ? '' : x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function toast(msg){ var t = document.createElement('div'); t.textContent = msg; t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:999999;max-width:90vw;text-align:center'; document.body.appendChild(t); setTimeout(function(){ t.remove(); }, 2600); }
+  var IN = 'class="bg-background text-foreground border border-border" style="display:block;width:100%;box-sizing:border-box;border-radius:8px;padding:9px 10px;font-size:14px;margin-top:4px"';
+  var BTN = 'class="bg-primary text-primary-foreground" style="border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer"';
+  var BTN2 = 'class="border border-border text-foreground" style="background:transparent;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer"';
+  function card(title, sub, body){
+    return '<div class="bg-card border border-border rounded-xl" style="margin-bottom:16px;overflow:hidden"><div class="border-b border-border bg-muted/30" style="padding:10px 16px"><p style="margin:0;font-size:14px;font-weight:700">' + title + '</p>'
+      + (sub ? '<p class="text-muted-foreground" style="margin:2px 0 0;font-size:12px">' + sub + '</p>' : '') + '</div><div style="padding:14px 16px">' + body + '</div></div>';
+  }
+  function lab(t){ return '<label style="font-size:12px;font-weight:600">' + t + '</label>'; }
+  function chk(id, on, title, sub){ return '<label style="display:flex;gap:10px;align-items:flex-start;font-size:14px;margin-bottom:10px;cursor:pointer"><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + ' style="width:18px;height:18px;margin-top:2px;flex-shrink:0"><span><b>' + title + '</b>' + (sub ? '<br><span class="text-muted-foreground" style="font-size:12px">' + sub + '</span>' : '') + '</span></label>'; }
+  function num(id, label, val, min, max, step, hint){ return '<div>' + lab(label) + '<input id="' + id + '" type="number" inputmode="decimal" min="' + min + '" max="' + max + '" step="' + step + '" value="' + val + '" ' + IN + '>' + (hint ? '<p class="text-muted-foreground" style="font-size:11px;margin:3px 0 0">' + hint + '</p>' : '') + '</div>'; }
+  function sample(){
+    var now = new Date();
+    return {id: 0, orderNumber: 'TEST', type: 'takeout', createdAt: now.toISOString(), promisedAt: new Date(now.getTime() + 30*60000).toISOString(),
+      customerName: 'Test Customer', customerPhone: '613-555-0000', notes: 'ALLERGY: test \u2014 no nuts', subtotal: 33.75, tax: 4.39, total: 38.14, deliveryFee: 0,
+      items: [{name: 'Build Your Own Pizza', price: 26.5, quantity: 1, modifiers: JSON.stringify(['LRG \u00b7 10 slices','Regular','Pepperoni x2','Mushrooms (Left \u00bd)']), modPrices: JSON.stringify([0,0,4.5,2.25])},
+              {name: 'Garlic Bread with Cheese', price: 7.25, quantity: 1, modifiers: '[]', modPrices: '[]'}]};
+  }
+  function render(root){
+    var c = load();
+    var h = '<div style="padding:20px;max-width:900px"><h1 class="font-serif text-2xl" style="margin:0 0 4px">Printer Setup</h1>'
+      + '<p class="text-muted-foreground" style="margin:0 0 16px;font-size:13px">Prep ticket layout and printing for <b>this device</b>. Each computer or tablet keeps its own printer settings.</p>';
+    var testBtn = '<button id="pr_test" ' + BTN + '>Print Test Ticket</button>';
+    if (!unlocked) {
+      h += card('Locked', 'Manager or owner PIN required to change printer settings',
+        '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input id="pr_pin" type="password" inputmode="numeric" maxlength="8" placeholder="\u2022\u2022\u2022\u2022" class="bg-background text-foreground border border-border" style="width:110px;border-radius:6px;padding:7px 9px;font-size:14px"><button id="pr_unlock" ' + BTN + '>Unlock</button><span id="pr_err" style="display:none;color:#dc2626;font-size:12px"></span></div>'
+        + '<p class="text-muted-foreground" style="margin:12px 0 10px;font-size:12px">Current: ' + esc((PRESETS[c.preset] || PRESETS.custom).label) + ' \u00b7 ' + c.copies + ' cop' + (c.copies > 1 ? 'ies' : 'y') + ' \u00b7 ' + (c.autoPrint ? 'auto-print ON' : 'auto-print off') + '</p>' + testBtn);
+      root.innerHTML = h + '</div>';
+      var go = function(){ var r = window.__checkMgrPin__(root.querySelector('#pr_pin').value); if (r.ok) { unlocked = true; render(root); } else { var er = root.querySelector('#pr_err'); er.textContent = r.employee ? 'Manager or owner PIN needed' : 'Incorrect PIN'; er.style.display = 'inline'; root.querySelector('#pr_pin').value = ''; } };
+      root.querySelector('#pr_unlock').onclick = go; root.querySelector('#pr_pin').onkeydown = function(e){ if (e.key === 'Enter') go(); };
+      root.querySelector('#pr_test').onclick = function(){ window.__printTicket__ && window.__printTicket__(sample()); };
+      return;
+    }
+    var opts = Object.keys(PRESETS).map(function(k){ return '<option value="' + k + '"' + (c.preset === k ? ' selected' : '') + '>' + esc(PRESETS[k].label) + '</option>'; }).join('');
+    h += card('Printer', 'Pick your printer \u2014 the layout adjusts to fit the paper',
+      '<div>' + lab('Printer model') + '<select id="pr_preset" ' + IN + '>' + opts + '</select></div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:12px">'
+      + num('pr_paper', 'Paper width (mm)', c.paperMm, 50, 112, 0.5, '')
+      + num('pr_printmm', 'Printable width (mm)', c.printMm, 40, 104, 0.1, 'TM-U220B: 63.4')
+      + num('pr_cols', 'Characters per line', c.cols, 28, 56, 1, 'TM-U220B: 40 (or 42)')
+      + '</div>');
+    h += card('Ticket look', '',
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">'
+      + num('pr_size', 'Text size (%)', c.sizePct, 70, 140, 5, 'Lower it if lines wrap')
+      + num('pr_lh', 'Line spacing', c.lineH, 1, 2, 0.05, '1.3 = normal')
+      + num('pr_feed', 'Blank lines at end', c.feed, 0, 12, 1, 'Room before the cutter')
+      + num('pr_copies', 'Copies per ticket', c.copies, 1, 4, 1, 'e.g. 2 = kitchen + driver')
+      + '</div><div style="margin-top:14px">'
+      + chk('pr_bold', c.bold, 'Bold text', 'Darker print \u2014 recommended for impact printers like the TM-U220B')
+      + chk('pr_prices', c.prices, 'Show prices on items & toppings', 'Totals at the bottom always print')
+      + '</div>');
+    h += card('When to print', '',
+      chk('pr_onaccept', c.printOnAccept, 'Open the ticket when an order is accepted', 'Off = only print when someone taps Print on the order')
+      + chk('pr_auto', c.autoPrint, 'Send to the printer automatically', 'Opens the print window right away. With the silent-print shortcut below, it prints with no window at all.')
+      + chk('pr_close', c.autoClose, 'Close the ticket screen after printing', ''));
+    h += card('Header & footer', 'One line per row',
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px"><div>' + lab('Header (top of ticket)') + '<textarea id="pr_header" rows="4" ' + IN + ' style="font-family:ui-monospace,Menlo,monospace">' + esc(c.header.join('\n')) + '</textarea></div>'
+      + '<div>' + lab('Footer (bottom, centred)') + '<textarea id="pr_footer" rows="4" ' + IN + ' style="font-family:ui-monospace,Menlo,monospace">' + esc(c.footer.join('\n')) + '</textarea></div></div>');
+    h += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin:-4px 0 16px"><button id="pr_save" ' + BTN + ' style="padding:10px 18px;font-size:14px">Save Printer Settings</button>' + testBtn.replace(BTN, BTN2) + '<button id="pr_reset" ' + BTN2 + '>Reset to Default</button><button id="pr_lock" style="background:none;border:none;color:#b45309;text-decoration:underline;font-size:12px;cursor:pointer">Lock</button></div>';
+    var steps1 = [
+      'Plug the TM-U220B into this computer (USB) or your network (Ethernet), and load 76 mm paper and a ribbon.',
+      'Download and install the <b>EPSON Advanced Printer Driver (APD)</b> for the TM-U220 from <a href="https://epson.com/Support/Point-of-Sale/Impact-Printers-(Dot-Matrix)/Epson-TM-U220/s/SPT_C31C514103" target="_blank" rel="noopener" style="text-decoration:underline">Epson support</a>. Choose the <b>TM-U220 Receipt (76mm)</b> driver when asked.',
+      'In Windows: <b>Settings \u2192 Bluetooth &amp; devices \u2192 Printers &amp; scanners</b>. Turn <b>off</b> \u201cLet Windows manage my default printer\u201d, click the TM-U220, and choose <b>Set as default</b>.',
+      'Still there, open <b>Printing preferences</b>: set paper to <b>Roll Paper 76 mm</b> and paper cut to cut at the end of each document/page.',
+      'Tap <b>Print Test Ticket</b>. In the Chrome print window pick the TM-U220, set <b>Margins: None</b>, <b>Scale: Default</b>, and untick <b>Headers and footers</b>. Chrome remembers these.',
+      'If lines wrap or text is too small, adjust <b>Text size</b> above and test again.'
+    ];
+    var target = '"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --kiosk-printing ' + location.href.split('#')[0] + '#/';
+    var steps2 = [
+      'Right-click the desktop \u2192 <b>New \u2192 Shortcut</b>. Paste the line below as the location, click Next, and name it <b>Strato\u2019s Staff (auto-print)</b>.',
+      'Close <b>every</b> Chrome window first (check the taskbar) \u2014 if Chrome is already open, the shortcut\u2019s setting is ignored. Then open the staff portal from the new shortcut.',
+      'Turn on <b>Send to the printer automatically</b> above. Tickets now print the moment an order is accepted, with no print window.'
+    ];
+    h += card('Setup guide \u2014 Epson TM-U220B on Windows', 'One time per computer',
+      '<ol style="margin:0;padding-left:20px;font-size:13px;line-height:1.6">' + steps1.map(function(s){ return '<li style="margin-bottom:4px">' + s + '</li>'; }).join('') + '</ol>');
+    h += card('Optional \u2014 print with no pop-up (silent printing)', 'Chrome on Windows only',
+      '<ol style="margin:0 0 10px;padding-left:20px;font-size:13px;line-height:1.6">' + steps2.map(function(s){ return '<li style="margin-bottom:4px">' + s + '</li>'; }).join('') + '</ol>'
+      + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><b style="font-size:13px">Shortcut location</b><button id="pr_copy" ' + BTN2 + ' style="padding:5px 12px;font-size:12px">Copy</button></div>'
+      + '<textarea id="pr_target" readonly rows="3" class="bg-background text-foreground border border-border" style="display:block;width:100%;box-sizing:border-box;border-radius:8px;padding:9px 10px;font-size:11px;font-family:ui-monospace,Menlo,monospace">' + esc(target) + '</textarea>'
+      + '<p class="text-muted-foreground" style="font-size:11px;margin:6px 0 0">Silent printing always uses the Windows default printer. To print a ticket again, tap Print on the order.</p>');
+    root.innerHTML = h + '</div>';
+    var $ = function(id){ return root.querySelector('#' + id); };
+    function clamp(v, lo, hi, d){ v = parseFloat(v); return isNaN(v) ? d : Math.max(lo, Math.min(hi, v)); }
+    function collect(){
+      var n = load();
+      n.preset = $('pr_preset').value;
+      n.paperMm = clamp($('pr_paper').value, 50, 112, 76); n.printMm = clamp($('pr_printmm').value, 40, n.paperMm, 63.4); n.cols = Math.round(clamp($('pr_cols').value, 28, 56, 40));
+      n.sizePct = clamp($('pr_size').value, 70, 140, 100); n.lineH = clamp($('pr_lh').value, 1, 2, 1.3); n.feed = Math.round(clamp($('pr_feed').value, 0, 12, 3)); n.copies = Math.round(clamp($('pr_copies').value, 1, 4, 1));
+      n.bold = $('pr_bold').checked; n.prices = $('pr_prices').checked; n.printOnAccept = $('pr_onaccept').checked; n.autoPrint = $('pr_auto').checked; n.autoClose = $('pr_close').checked;
+      n.header = $('pr_header').value.split('\n').map(function(x){ return x.replace(/\s+$/, ''); }).filter(function(x, i, a){ return x || i < a.length - 1; }).slice(0, 8);
+      n.footer = $('pr_footer').value.split('\n').map(function(x){ return x.trim(); }).filter(Boolean).slice(0, 8);
+      return n;
+    }
+    $('pr_preset').onchange = function(){ var p = PRESETS[this.value]; if (!p || this.value === 'custom') return; $('pr_paper').value = p.paperMm; $('pr_printmm').value = p.printMm; $('pr_cols').value = p.cols; $('pr_feed').value = p.feed; $('pr_bold').checked = p.bold; };
+    ['pr_paper','pr_printmm','pr_cols'].forEach(function(id){ $(id).oninput = function(){ $('pr_preset').value = 'custom'; }; });
+    root.querySelectorAll('input[type=number]').forEach(function(x){ x.onfocus = function(){ setTimeout(function(){ x.select(); }, 0); }; });
+    $('pr_save').onclick = function(){ save(collect()); toast('Printer settings saved'); render(root); };
+    $('pr_test').onclick = function(){ var keep = localStorage.getItem(KEY); save(collect()); window.__printTicket__ && window.__printTicket__(sample()); if (keep == null) localStorage.removeItem(KEY); else localStorage.setItem(KEY, keep); };
+    $('pr_reset').onclick = function(){ if (!confirm('Reset printer settings to default (Epson TM-U220B)?')) return; localStorage.removeItem(KEY); render(root); toast('Printer settings reset'); };
+    $('pr_lock').onclick = function(){ unlocked = false; render(root); };
+    $('pr_copy').onclick = function(){ var ta = $('pr_target'); ta.select(); var ok = false; try { ok = document.execCommand('copy'); } catch(e) {} if (navigator.clipboard) navigator.clipboard.writeText(ta.value).then(function(){ toast('Copied'); }, function(){ if (!ok) toast('Select the text and copy it'); }); else toast(ok ? 'Copied' : 'Select the text and copy it'); };
+  }
+  window.__renderPrinterAdmin__ = function(root){ unlocked = false; render(root); };
+})();
+
+</script>
     <script type="module" crossorigin src="./assets/staff-C0_JW9rY.js"></script>
     <link rel="modulepreload" crossorigin href="./assets/index-CVKFgV60.js">
     <link rel="stylesheet" crossorigin href="./assets/index-DsjFvvC_.css">
