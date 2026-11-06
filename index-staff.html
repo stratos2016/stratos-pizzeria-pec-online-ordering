@@ -1339,11 +1339,11 @@
   };
   var DEF = {
     preset: 'tmu220', paperMm: 76, printMm: 63.4, cols: 40, sizePct: 100, lineH: 1.3, bold: true, feed: 3, copies: 1,
-    printOnAccept: true, autoPrint: false, autoClose: true, prices: true,
+    printOnAccept: true, autoPrint: false, autoClose: true, prices: true, method: 'browser', net: [], redAllergy: false,
     header: ['Stratos Pizzeria & Restaurant', '20018 Loyalist Parkway', 'Consecon         ON   KOK1t0'],
     footer: ['We appreciate your comments:', '(613) 394-3000', 'OPEN 5 DAYS A WEEK. SEE YOU AGAIN!']
   };
-  function load(){ var c = {}; try { c = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch(e) {} return Object.assign({}, DEF, c); }
+  function load(){ var c = {}; try { c = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch(e) {} var o = Object.assign({}, DEF, c); if (o.useLocal == null) o.useLocal = o.method !== 'network'; if (o.useNet == null) o.useNet = o.method === 'network'; return o; }
   function save(c){ try { localStorage.setItem(KEY, JSON.stringify(c)); } catch(e) {} }
   // Courier character width = 0.6em; 1px = 0.2646mm
   function fitPx(c){ return Math.round((c.printMm / (c.cols * 0.6 * 0.2646)) * 0.97 * (c.sizePct / 100) * 10) / 10; }
@@ -1351,7 +1351,7 @@
     var c = load();
     return {cols: c.cols, paperMm: c.paperMm, contentMm: c.printMm, marginMm: 0, fontPx: fitPx(c), lineH: c.lineH, bold: c.bold, feed: c.feed,
       copies: c.copies, printOnAccept: c.printOnAccept, autoPrint: c.autoPrint, autoClose: c.autoClose, prices: c.prices,
-      header: c.header, footer: c.footer};
+      header: c.header, footer: c.footer, useLocal: c.useLocal, useNet: c.useNet, redAllergy: c.redAllergy};
   };
 
   var unlocked = false;
@@ -1397,12 +1397,36 @@
       + num('pr_printmm', 'Printable width (mm)', c.printMm, 40, 104, 0.1, 'TM-U220B: 63.4')
       + num('pr_cols', 'Characters per line', c.cols, 28, 56, 1, 'TM-U220B: 40 (or 42)')
       + '</div>');
+    var isNet = !!c.useNet;
+    var nb = chk('pr_uselocal', c.useLocal, 'USB / Windows printer on this tablet', 'Prints through the Windows print window to the tablet\u2019s default printer (USB, or any printer installed in Windows). With the silent-print shortcut it prints with no window.')
+      + chk('pr_usenet', c.useNet, 'Network printers \u2014 Ethernet or Wi-Fi (Epson ePOS)', 'Prints the whole ticket on every network printer listed below at the same time, with no print window.')
+      + '<p class="text-muted-foreground" style="font-size:12px;margin:0">Tick both to print on a USB printer <b>and</b> network printers for every order.</p>';
+    if (isNet) {
+      nb += '<div style="margin-top:14px;border-top:1px solid rgba(128,128,128,.2);padding-top:12px">';
+      (c.net || []).forEach(function(p, i){
+        nb += '<div class="border border-border rounded-lg" style="padding:10px 12px;margin-bottom:10px" data-net="' + i + '">'
+          + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">'
+          + '<div>' + lab('Name') + '<input data-f="name" ' + IN + ' maxlength="30" placeholder="e.g. Pizza Station" value="' + esc(p.name || '') + '"></div>'
+          + '<div>' + lab('IP address') + '<input data-f="ip" ' + IN + ' inputmode="decimal" placeholder="192.168.1.50" value="' + esc(p.ip || '') + '"></div>'
+          + '<div>' + lab('Copies') + '<input data-f="copies" type="number" min="1" max="4" step="1" ' + IN + ' value="' + (p.copies || 1) + '"></div>'
+          + '</div><div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:13px">'
+          + '<label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input data-f="on" type="checkbox"' + (p.on !== false ? ' checked' : '') + '> Print here</label>'
+          + '<label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input data-f="https" type="checkbox"' + (p.https !== false ? ' checked' : '') + '> Secure (https)</label>'
+          + '<button type="button" data-act="test" ' + BTN2 + ' style="padding:5px 12px;font-size:12px">Test</button>'
+          + '<button type="button" data-act="open" ' + BTN2 + ' style="padding:5px 12px;font-size:12px">Open printer page</button>'
+          + '<button type="button" data-act="del" style="background:none;border:none;color:#dc2626;text-decoration:underline;font-size:12px;cursor:pointer;padding:0">Remove</button>'
+          + '</div></div>';
+      });
+      nb += '<button type="button" id="pr_addnet" ' + BTN2 + '>+ Add Printer</button>'
+        + '<div style="margin-top:12px">' + chk('pr_red', c.redAllergy, 'Print allergy lines in red', 'Needs a black/red ribbon (ERC-38 B/R) in the TM-U220') + '</div></div>';
+    }
+    h += card('Printers', 'Use one or both', nb);
     h += card('Ticket look', '',
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">'
       + num('pr_size', 'Text size (%)', c.sizePct, 70, 140, 5, 'Lower it if lines wrap')
       + num('pr_lh', 'Line spacing', c.lineH, 1, 2, 0.05, '1.3 = normal')
       + num('pr_feed', 'Blank lines at end', c.feed, 0, 12, 1, 'Room before the cutter')
-      + num('pr_copies', 'Copies per ticket', c.copies, 1, 4, 1, 'e.g. 2 = kitchen + driver')
+      + num('pr_copies', 'Copies (USB printer)', c.copies, 1, 4, 1, 'Network printers set their own copies')
       + '</div><div style="margin-top:14px">'
       + chk('pr_bold', c.bold, 'Bold text', 'Darker print \u2014 recommended for impact printers like the TM-U220B')
       + chk('pr_prices', c.prices, 'Show prices on items & toppings', 'Totals at the bottom always print')
@@ -1429,9 +1453,23 @@
       'Close <b>every</b> Chrome window first (check the taskbar) \u2014 if Chrome is already open, the shortcut\u2019s setting is ignored. Then open the staff portal from the new shortcut.',
       'Turn on <b>Send to the printer automatically</b> above. Tickets now print the moment an order is accepted, with no print window.'
     ];
-    h += card('Setup guide \u2014 Epson TM-U220B on Windows', 'One time per computer',
+    if (isNet) {
+      var ns = [
+        'Each printer needs a network connection \u2014 for the TM-U220B that\u2019s the <b>Ethernet model</b> (UB-E04 card, network port on the back). Plug it into your router or network switch.',
+        'Print the status sheet to find its <b>IP address</b>: turn the printer on, wait 20 seconds, then use a pen tip to hold the small button beside the network port for about 3 seconds. Let go when it starts printing. (Don\u2019t hold it while turning the power on \u2014 that resets the card.)',
+        'On this tablet, type <b>http://</b> and that IP address into the browser to open the printer\u2019s settings page (EpsonNet Config). The login is usually <b>epson / epson</b>, or the password on the printer\u2019s label.',
+        'In those settings: set a <b>fixed IP address</b> (so it never changes), and turn <b>ePOS-Print: Enable</b> on. Save \u2014 the printer restarts.',
+        'Back here, tap <b>+ Add Printer</b>, give it a name, enter the IP address, and <b>Save Printer Settings</b>.',
+        'Tap <b>Open printer page</b>. The browser warns the connection isn\u2019t private (the printer makes its own certificate). Click <b>Advanced \u2192 Continue</b>. Then close that tab.',
+        'Tap <b>Test</b>. If it says \u201ccouldn\u2019t reach it\u201d, repeat step 6, or untick <b>Secure (https)</b> only if your browser allows it. Repeat for the second printer.',
+        'For a permanent trust: on the printer page click the lock/warning icon \u2192 Certificate \u2192 Details \u2192 Export, then double-click the saved file \u2192 <b>Install Certificate \u2192 Local Machine \u2192 Trusted Root Certification Authorities</b>. I can walk you through this.'
+      ];
+      h += card('Setup guide \u2014 network printers', 'One time per printer, on the ordering tablet',
+        '<ol style="margin:0;padding-left:20px;font-size:13px;line-height:1.6">' + ns.map(function(s){ return '<li style="margin-bottom:4px">' + s + '</li>'; }).join('') + '</ol>');
+    }
+    if (c.useLocal) h += card('Setup guide \u2014 USB printer (Epson TM-U220B) on Windows', 'One time per tablet',
       '<ol style="margin:0;padding-left:20px;font-size:13px;line-height:1.6">' + steps1.map(function(s){ return '<li style="margin-bottom:4px">' + s + '</li>'; }).join('') + '</ol>');
-    h += card('Optional \u2014 print with no pop-up (silent printing)', 'Chrome on Windows only',
+    if (c.useLocal) h += card('Optional \u2014 USB printer with no pop-up (silent printing)', 'Chrome or Edge on Windows',
       '<ol style="margin:0 0 10px;padding-left:20px;font-size:13px;line-height:1.6">' + steps2.map(function(s){ return '<li style="margin-bottom:4px">' + s + '</li>'; }).join('') + '</ol>'
       + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><b style="font-size:13px">Shortcut location</b><button id="pr_copy" ' + BTN2 + ' style="padding:5px 12px;font-size:12px">Copy</button></div>'
       + '<textarea id="pr_target" readonly rows="3" class="bg-background text-foreground border border-border" style="display:block;width:100%;box-sizing:border-box;border-radius:8px;padding:9px 10px;font-size:11px;font-family:ui-monospace,Menlo,monospace">' + esc(target) + '</textarea>'
@@ -1446,9 +1484,20 @@
       n.sizePct = clamp($('pr_size').value, 70, 140, 100); n.lineH = clamp($('pr_lh').value, 1, 2, 1.3); n.feed = Math.round(clamp($('pr_feed').value, 0, 12, 3)); n.copies = Math.round(clamp($('pr_copies').value, 1, 4, 1));
       n.bold = $('pr_bold').checked; n.prices = $('pr_prices').checked; n.printOnAccept = $('pr_onaccept').checked; n.autoPrint = $('pr_auto').checked; n.autoClose = $('pr_close').checked;
       n.header = $('pr_header').value.split('\n').map(function(x){ return x.replace(/\s+$/, ''); }).filter(function(x, i, a){ return x || i < a.length - 1; }).slice(0, 8);
+      n.useLocal = $('pr_uselocal').checked; n.useNet = $('pr_usenet').checked; delete n.method;
+      if ($('pr_red')) n.redAllergy = $('pr_red').checked;
+      if (root.querySelector('[data-net]')) n.net = Array.prototype.map.call(root.querySelectorAll('[data-net]'), function(r, i){ var g = function(f){ return r.querySelector('[data-f=' + f + ']'); }; var old = (n.net || [])[i] || {}; return {id: old.id || ('p' + Date.now().toString(36) + i), name: g('name').value.trim(), ip: g('ip').value.trim().replace(/^https?:\/\//, '').replace(/\/.*$/, ''), copies: Math.max(1, Math.min(4, parseInt(g('copies').value, 10) || 1)), on: g('on').checked, https: g('https').checked}; });
       n.footer = $('pr_footer').value.split('\n').map(function(x){ return x.trim(); }).filter(Boolean).slice(0, 8);
       return n;
     }
+    ['pr_uselocal','pr_usenet'].forEach(function(id){ $(id).onchange = function(){ var n = collect(); if (!n.useLocal && !n.useNet) { toast('Pick at least one type of printer'); this.checked = true; return; } save(n); render(root); }; });
+    if ($('pr_addnet')) $('pr_addnet').onclick = function(){ var n = collect(); n.net = (n.net || []).concat([{id: 'p' + Date.now().toString(36), name: 'Printer ' + ((n.net || []).length + 1), ip: '', copies: 1, on: true, https: location.protocol === 'https:'}]); save(n); render(root); };
+    root.querySelectorAll('[data-net]').forEach(function(r){
+      var i = +r.getAttribute('data-net');
+      r.querySelector('[data-act=del]').onclick = function(){ var n = collect(); if (!confirm('Remove ' + (n.net[i].name || 'this printer') + '?')) return; n.net.splice(i, 1); save(n); render(root); };
+      r.querySelector('[data-act=open]').onclick = function(){ var p = collect().net[i]; if (!p.ip) return toast('Enter the IP address first'); window.open((p.https ? 'https://' : 'http://') + p.ip + '/', '_blank'); };
+      r.querySelector('[data-act=test]').onclick = function(){ var n = collect(); var p = n.net[i]; if (!p.ip) return toast('Enter the IP address first'); var keep = localStorage.getItem(KEY); save(n); window.__printTicket__ && window.__printTicket__(Object.assign(sample(), {__netOverride: p})); if (keep != null) localStorage.setItem(KEY, keep); };
+    });
     $('pr_preset').onchange = function(){ var p = PRESETS[this.value]; if (!p || this.value === 'custom') return; $('pr_paper').value = p.paperMm; $('pr_printmm').value = p.printMm; $('pr_cols').value = p.cols; $('pr_feed').value = p.feed; $('pr_bold').checked = p.bold; };
     ['pr_paper','pr_printmm','pr_cols'].forEach(function(id){ $(id).oninput = function(){ $('pr_preset').value = 'custom'; }; });
     root.querySelectorAll('input[type=number]').forEach(function(x){ x.onfocus = function(){ setTimeout(function(){ x.select(); }, 0); }; });
@@ -1459,6 +1508,60 @@
     $('pr_copy').onclick = function(){ var ta = $('pr_target'); ta.select(); var ok = false; try { ok = document.execCommand('copy'); } catch(e) {} if (navigator.clipboard) navigator.clipboard.writeText(ta.value).then(function(){ toast('Copied'); }, function(){ if (!ok) toast('Select the text and copy it'); }); else toast(ok ? 'Copied' : 'Select the text and copy it'); };
   }
   window.__renderPrinterAdmin__ = function(root){ unlocked = false; render(root); };
+})();
+
+</script>
+<script>
+(function(){
+  var KEY = 'stratos_printer';
+  function cfg(){ try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch(e) { return {}; } }
+  function toast(msg, ms){ var t = document.createElement('div'); t.textContent = msg; t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:999999;max-width:90vw;text-align:center;white-space:pre-line'; document.body.appendChild(t); setTimeout(function(){ t.remove(); }, ms || 3500); }
+  var MAP = {'\u2014':'-','\u2013':'-','\u2018':"'",'\u2019':"'",'\u201c':'"','\u201d':'"','\u2026':'...','\u00b7':'-','\u00bd':'1/2','\u2009':' ','\u00a0':' '};
+  function clean(s){ return String(s).replace(/[\u2014\u2013\u2018\u2019\u201c\u201d\u2026\u00b7\u00bd\u2009\u00a0]/g, function(c){ return MAP[c]; }).replace(/[^\x20-\x7e]/g, ''); }
+  function x(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function buildXml(lines, c, copyNo, copies){
+    var b = '<epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print"><text lang="en"/><text align="left"/>' + (c.bold !== false ? '<text em="true"/>' : '');
+    var all = (copies > 1 ? [centerTxt('COPY ' + copyNo + ' OF ' + copies, c.cols || 40)] : []).concat(lines);
+    all.forEach(function(l){
+      var t = clean(l), red = c.redAllergy && (/^!!/.test(t) || /^\*{10,}$/.test(t));
+      b += (red ? '<text color="color_2"/>' : '') + '<text>' + x(t) + '&#10;</text>' + (red ? '<text color="color_1"/>' : '');
+    });
+    b += '<feed line="' + Math.max(0, Math.min(12, +c.feed || 3)) + '"/><cut type="feed"/></epos-print>';
+    return '<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>' + b + '</s:Body></s:Envelope>';
+  }
+  function centerTxt(s, w){ var sp = Math.max(0, Math.floor((w - s.length) / 2)); return new Array(sp + 1).join(' ') + s; }
+  function sendOne(p, xml){
+    var host = String(p.ip || '').trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+    var url = (p.https === false ? 'http://' : 'https://') + host + '/cgi-bin/epos/service.cgi?devid=' + encodeURIComponent(p.devid || 'local_printer') + '&timeout=10000';
+    var ctl = window.AbortController ? new AbortController() : null; var tm = setTimeout(function(){ ctl && ctl.abort(); }, 15000);
+    return fetch(url, {method: 'POST', headers: {'Content-Type': 'text/xml; charset=utf-8', 'If-Modified-Since': 'Thu, 01 Jan 1970 00:00:00 GMT', 'SOAPAction': '""'}, body: xml, signal: ctl ? ctl.signal : undefined})
+      .then(function(r){ return r.text(); })
+      .then(function(txt){
+        clearTimeout(tm);
+        var ok = /success="true"/.test(txt), code = (txt.match(/code="([^"]*)"/) || [])[1] || '';
+        var why = {EPTR_COVER_OPEN: 'cover open', EPTR_REC_EMPTY: 'out of paper', EPTR_MECHANICAL: 'paper jam / mechanical error', EPTR_AUTOCUTTER: 'cutter error', DeviceNotFound: 'wrong device ID', EX_TIMEOUT: 'printer busy or offline', SchemaError: 'bad print data', EPTR_UNRECOVERABLE: 'printer error \u2014 turn it off and on'}[code] || code;
+        return {ok: ok, msg: ok ? 'printed' : (why || 'printer said no')};
+      })
+      .catch(function(){ clearTimeout(tm); return {ok: false, msg: "couldn't reach it"}; });
+  }
+  // Print to all enabled network printers (or one, for tests)
+  window.__netPrint__ = function(lines, opts){
+    opts = opts || {}; var c = cfg();
+    var list = (c.net || []).filter(function(p){ return p.ip && (opts.only ? p.id === opts.only : p.on !== false); });
+    if (opts.override) list = [opts.override];
+    if (!list.length) { toast('No network printers set up \u2014 see Printer Setup'); return Promise.resolve([]); }
+    return Promise.all(list.map(function(p){
+      var n = Math.max(1, Math.min(4, +p.copies || 1)), chain = Promise.resolve({ok: true});
+      for (var i = 1; i <= n; i++) (function(i){ chain = chain.then(function(prev){ return prev.ok ? sendOne(p, buildXml(lines, c, i, n)) : prev; }); })(i);
+      return chain.then(function(r){ return {name: p.name || p.ip, ok: r.ok, msg: r.msg}; });
+    })).then(function(res){
+      var bad = res.filter(function(r){ return !r.ok; });
+      if (!opts.silent) toast(res.map(function(r){ return (r.ok ? '\u2713 ' : '\u2717 ') + r.name + (r.ok ? '' : ' \u2014 ' + r.msg); }).join('\n'), bad.length ? 7000 : 3000);
+      if (bad.length && typeof opts.onFail === 'function') opts.onFail(bad);
+      return res;
+    });
+  };
+  window.__netPrintSend__ = sendOne; window.__netPrintXml__ = buildXml;
 })();
 
 </script>
