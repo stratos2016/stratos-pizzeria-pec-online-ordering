@@ -295,10 +295,21 @@
     
     <script>
 (function(){ try { if ((document.documentElement.getAttribute('data-ticket-test') === 'true' || /[?&]testticket=1/.test(location.search)) && window.parent !== window) { window.__TEST_TICKET__ = true;
+  var channel = document.documentElement.getAttribute('data-ticket-channel');
+  window.__showTestTicketInParent__ = function(order){
+    if (channel) window.parent.postMessage({type:'stratos-ticket-preview', channel:channel, order:order}, '*');
+    else window.parent.__showTestTicket__(order);
+  };
+  function announceReady(){
+    if (document.querySelector('[data-testid^="cat-"]')) {
+      if (channel) window.parent.postMessage({type:'stratos-ticket-ready', channel:channel}, '*');
+    } else setTimeout(announceReady, 50);
+  }
+  document.addEventListener('DOMContentLoaded', announceReady);
   document.addEventListener('DOMContentLoaded', function(){ var b = document.createElement('div'); b.textContent = 'TEST MODE \u2014 build any order, then tap Checkout \u2192 Preview Prep Ticket. Nothing is saved or sent.'; b.style.cssText = 'position:sticky;top:0;z-index:9999;background:#b45309;color:#fff;font:600 13px Inter,system-ui,sans-serif;padding:8px 12px;text-align:center'; document.body.insertBefore(b, document.body.firstChild); });
 } } catch(e) {} })();
 </script>
-<script type="module" crossorigin src="./assets/customer-DlM5k5_a.js"></script>
+<script type="module" crossorigin src="./assets/customer-DlM5k5_a.js?v=ticket-bridge-1"></script>
     <link rel="modulepreload" crossorigin href="./assets/index-CVKFgV60.js">
     <link rel="stylesheet" crossorigin href="./assets/index-DsjFvvC_.css">
   </head>

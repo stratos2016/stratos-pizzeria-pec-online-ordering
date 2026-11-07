@@ -1548,10 +1548,19 @@
       + '<iframe hidden style="flex:1;min-height:0;border:0;width:100%;background:#fff" title="Test order builder"></iframe>';
     document.body.appendChild(d);
     var frame = d.querySelector('iframe'), status = d.querySelector('#__tt_status');
-    var controller = null, timer = null, attempt = 0;
+    var controller = null, timer = null, attempt = 0, channel = '';
+    function receive(event){
+      if (!d.isConnected || event.source !== frame.contentWindow || !event.data || event.data.channel !== channel) return;
+      if (event.data.type === 'stratos-ticket-ready') {
+        clearTimeout(timer); status.hidden = true; frame.hidden = false;
+      } else if (event.data.type === 'stratos-ticket-preview' && event.data.order && Array.isArray(event.data.order.items)) {
+        window.__showTestTicket__(event.data.order);
+      }
+    }
+    window.addEventListener('message', receive);
     function stop(){ if (controller) controller.abort(); clearTimeout(timer); }
     function failed(){
-      ++attempt; stop(); frame.hidden = true; status.hidden = false;
+      ++attempt; channel = ''; stop(); frame.hidden = true; status.hidden = false;
       status.textContent = 'The test menu could not load. Check your connection, then try again. ';
       var retry = document.createElement('button');
       retry.textContent = 'Retry'; retry.style.cssText = 'padding:8px 14px;border:0;border-radius:6px;background:#0d1b34;color:white;cursor:pointer';
@@ -1559,6 +1568,7 @@
     }
     async function loadTestMenu(){
       stop(); var run = ++attempt;
+      channel = crypto.randomUUID();
       controller = new AbortController(); status.hidden = false;
       status.textContent = 'Loading test menu...'; frame.hidden = true;
       timer = setTimeout(function(){ if (run === attempt && d.isConnected) failed(); }, 20000);
@@ -1574,22 +1584,11 @@
         // HTML response, whose frame-ancestors/X-Frame-Options can forbid embedding.
         var base = doc.createElement('base'); base.href = url.href;
         doc.head.prepend(base); doc.documentElement.setAttribute('data-ticket-test', 'true');
-        frame.onload = function(){
-          function ready(){
-            if (!d.isConnected || run !== attempt) return;
-            try {
-              if (!frame.contentWindow.__TEST_TICKET__ || !frame.contentDocument.querySelector('[data-testid^="cat-"]')) {
-                setTimeout(ready, 50); return;
-              }
-              clearTimeout(timer); status.hidden = true; frame.hidden = false;
-            } catch(e) { failed(); }
-          }
-          ready();
-        };
+        doc.documentElement.setAttribute('data-ticket-channel', channel);
         frame.srcdoc = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
       } catch(e) { if (d.isConnected && run === attempt) failed(); }
     }
-    d.querySelector('#__tt_close').onclick = function(){ ++attempt; stop(); d.remove(); var ov = document.getElementById('__print_overlay__'); if (ov) ov.remove(); };
+    d.querySelector('#__tt_close').onclick = function(){ ++attempt; stop(); window.removeEventListener('message', receive); d.remove(); var ov = document.getElementById('__print_overlay__'); if (ov) ov.remove(); };
     loadTestMenu();
   };
 })();
