@@ -1544,9 +1544,53 @@
     var d = document.createElement('div'); d.id = '__ticket_tester__';
     d.style.cssText = 'position:fixed;inset:0;z-index:99990;background:#f5f3ee;display:flex;flex-direction:column';
     d.innerHTML = '<div style="background:#0d1b34;color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px;font-family:Inter,system-ui,sans-serif"><b style="flex:1;font-size:14px">Test Order Builder \u2014 order like a customer, then Checkout \u2192 Preview Prep Ticket</b><button id="__tt_close" style="padding:6px 14px;border:none;border-radius:6px;background:#c09b6d;color:#fff;font-weight:600;cursor:pointer">\u2715 Close</button></div>'
-      + '<iframe src="index-customer.html?testticket=1" style="flex:1;border:0;width:100%;background:#fff" title="Test order builder"></iframe>';
+      + '<div id="__tt_status" role="status" style="padding:24px;font:14px Inter,system-ui,sans-serif;color:#0d1b34">Loading test menu...</div>'
+      + '<iframe hidden style="flex:1;min-height:0;border:0;width:100%;background:#fff" title="Test order builder"></iframe>';
     document.body.appendChild(d);
-    d.querySelector('#__tt_close').onclick = function(){ d.remove(); var ov = document.getElementById('__print_overlay__'); if (ov) ov.remove(); };
+    var frame = d.querySelector('iframe'), status = d.querySelector('#__tt_status');
+    var controller = null, timer = null, attempt = 0;
+    function stop(){ if (controller) controller.abort(); clearTimeout(timer); }
+    function failed(){
+      ++attempt; stop(); frame.hidden = true; status.hidden = false;
+      status.textContent = 'The test menu could not load. Check your connection, then try again. ';
+      var retry = document.createElement('button');
+      retry.textContent = 'Retry'; retry.style.cssText = 'padding:8px 14px;border:0;border-radius:6px;background:#0d1b34;color:white;cursor:pointer';
+      retry.onclick = loadTestMenu; status.appendChild(retry);
+    }
+    async function loadTestMenu(){
+      stop(); var run = ++attempt;
+      controller = new AbortController(); status.hidden = false;
+      status.textContent = 'Loading test menu...'; frame.hidden = true;
+      timer = setTimeout(function(){ if (run === attempt && d.isConnected) failed(); }, 20000);
+      try {
+        var url = new URL('index-customer.html', document.baseURI);
+        var response = await fetch(url.href, {signal:controller.signal, cache:'no-store'});
+        if (!response.ok) throw new Error('Test menu unavailable');
+        var html = await response.text();
+        if (!d.isConnected || run !== attempt) return;
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        if (!doc.querySelector('script[src*="customer-"]')) throw new Error('Invalid test menu');
+        // Use our own document content rather than navigate an iframe to a hosted
+        // HTML response, whose frame-ancestors/X-Frame-Options can forbid embedding.
+        var base = doc.createElement('base'); base.href = url.href;
+        doc.head.prepend(base); doc.documentElement.setAttribute('data-ticket-test', 'true');
+        frame.onload = function(){
+          function ready(){
+            if (!d.isConnected || run !== attempt) return;
+            try {
+              if (!frame.contentWindow.__TEST_TICKET__ || !frame.contentDocument.querySelector('[data-testid^="cat-"]')) {
+                setTimeout(ready, 50); return;
+              }
+              clearTimeout(timer); status.hidden = true; frame.hidden = false;
+            } catch(e) { failed(); }
+          }
+          ready();
+        };
+        frame.srcdoc = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+      } catch(e) { if (d.isConnected && run === attempt) failed(); }
+    }
+    d.querySelector('#__tt_close').onclick = function(){ ++attempt; stop(); d.remove(); var ov = document.getElementById('__print_overlay__'); if (ov) ov.remove(); };
+    loadTestMenu();
   };
 })();
 
