@@ -72,13 +72,13 @@ import{c as P,w as ws,r as o,x as Ss,j as e,a as O,d as js,q as W,u as xe,n as q
       tops.sort((a,b)=>{ const ka=a.k<0?1e4+a.i:a.k, kb=b.k<0?1e4+b.i:b.k; return ka-kb; });
       const short=x=>String(x).replace(/\(Left ½\)/,"(L ½)").replace(/\(Right ½\)/,"(R ½)");
       let preset=[]; try{ preset=JSON.parse(item.preset||"[]"); }catch{ preset=[]; }
-      let oth=others.filter(p=>p[0]!=="Regular");
+      let oth=[]; others.forEach(p=>{ if(p[0]==="Regular") return; const sm=String(p[0]).match(/^(Marinara|Olive Oil|BBQ Sauce|White Sauce|Garlic Sauce|Pesto)(\s*\(\+\$[\d.]+\))?$/i); if(sm){ if(/^Marinara$/i.test(sm[1])) return; oth.push(["No Sauce",0]); oth.push(["Add "+sm[1],p[1]]); return; } oth.push(p); });
       if(Array.isArray(preset)&&preset.length){
         oth=oth.filter(p=>!(p[0]==="Marinara"&&!p[1]));
         const present=new Set(tops.map(o=>topOf(o.p[0])));
         const noL=preset.filter(n=>!present.has(n)).map(n=>["No "+n,0]);
         const adds=tops.filter(o=>{ const nm=topOf(o.p[0]); return !(preset.includes(nm)&&!o.p[1]&&o.p[0]===nm); });
-        pairs=oth.concat([["Add WORKS",0]],noL,adds.map(o=>["Add "+short(o.p[0]),o.p[1]]));
+        pairs=[["Add WORKS",0]].concat(oth,noL,adds.map(o=>["Add "+short(o.p[0]),o.p[1]]));
       } else pairs=oth.concat(tops.map(o=>[ "Add "+short(o.p[0]), o.p[1] ])); }
     let itemName=sizePfx+(item.name||"");
     { const mm=(item.name||"").match(/^(.*?)\s*\((Sm|Small|Lg|Large|Med|Medium)\)$/i); if(!sizePfx&&mm){ const z=mm[2].toLowerCase(); itemName=(z.startsWith("s")?"Sml":z.startsWith("l")?"Lrg":"Medium")+" "+mm[1]; } }
@@ -99,7 +99,6 @@ import{c as P,w as ws,r as o,x as Ss,j as e,a as O,d as js,q as W,u as xe,n as q
       const pr=p[1]*qty;
       row("    ",mod,pr>0||/^Add /.test(mod)?money(pr):"");
     });
-    if(showP&&mp&&extras>0) lines.push(padL("Item total",W-9)+" "+padL(money(unit*qty),8));
   });
 
   lines.push("");
