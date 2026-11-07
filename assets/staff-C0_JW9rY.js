@@ -7,7 +7,7 @@ import{c as P,w as ws,r as o,x as Ss,j as e,a as O,d as js,q as W,u as xe,n as q
   const total=t.total??0;
   const tip=t.tip??0;
   const isDelivery=t.type==="delivery";
-  const sizeMap={"GF Small":"GF Small","SM":"Small","MED":"Medium","LRG":"Large","XL":"X-Large"};
+  const sizeMap={"GF Small":"GF Sml","SM":"Sml","MED":"Medium","LRG":"Lrg","XL":"XtrLrg"};
   const now=new Date();
   const ordered=t.createdAt?new Date(t.createdAt):now;
   const promisedMs=t.promisedAt?new Date(t.promisedAt).getTime():ordered.getTime()+(t.estimatedMinutes||(isDelivery?45:30))*60000;
@@ -70,8 +70,19 @@ import{c as P,w as ws,r as o,x as Ss,j as e,a as O,d as js,q as W,u as xe,n as q
       const isT=pairs.map(p=>!!topOf(p[0]));
       const others=pairs.filter((p,i)=>!isT[i]), tops=pairs.filter((p,i)=>isT[i]).map((p,i)=>({p,i,k:BO.indexOf(topOf(p[0]))}));
       tops.sort((a,b)=>{ const ka=a.k<0?1e4+a.i:a.k, kb=b.k<0?1e4+b.i:b.k; return ka-kb; });
-      pairs=others.concat(tops.map(o=>[ "Add "+String(o.p[0]).replace(/\(Left ½\)/,"(L ½)").replace(/\(Right ½\)/,"(R ½)"), o.p[1] ])); }
+      const short=x=>String(x).replace(/\(Left ½\)/,"(L ½)").replace(/\(Right ½\)/,"(R ½)");
+      let preset=[]; try{ preset=JSON.parse(item.preset||"[]"); }catch{ preset=[]; }
+      let oth=others.filter(p=>p[0]!=="Regular");
+      if(Array.isArray(preset)&&preset.length){
+        oth=oth.filter(p=>!(p[0]==="Marinara"&&!p[1]));
+        const present=new Set(tops.map(o=>topOf(o.p[0])));
+        const noL=preset.filter(n=>!present.has(n)).map(n=>["No "+n,0]);
+        const adds=tops.filter(o=>{ const nm=topOf(o.p[0]); return !(preset.includes(nm)&&!o.p[1]&&o.p[0]===nm); });
+        pairs=oth.concat([["Add WORKS",0]],noL,adds.map(o=>["Add "+short(o.p[0]),o.p[1]]));
+      } else pairs=oth.concat(tops.map(o=>[ "Add "+short(o.p[0]), o.p[1] ])); }
     let itemName=sizePfx+(item.name||"");
+    { const mm=(item.name||"").match(/^(.*?)\s*\((Sm|Small|Lg|Large|Med|Medium)\)$/i); if(!sizePfx&&mm){ const z=mm[2].toLowerCase(); itemName=(z.startsWith("s")?"Sml":z.startsWith("l")?"Lrg":"Medium")+" "+mm[1]; } }
+    itemName=itemName.replace(/Strato's /,"");
     if(sizePfx&&itemName.length>W-12&&/ Pizza$/.test(itemName)) itemName=itemName.replace(/ Pizza$/,"");
     const qty=item.quantity||1;
     const unit=+item.price||0;
