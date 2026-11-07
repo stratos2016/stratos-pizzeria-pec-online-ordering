@@ -1331,14 +1331,14 @@
 (function(){
   var KEY = 'stratos_printer';
   var PRESETS = {
-    tmu220:   {label: 'Epson TM-U220B \u2014 76 mm, 40 characters (factory setting)', paperMm: 76, printMm: 63.4, cols: 40, feed: 3, bold: true},
-    tmu220_42:{label: 'Epson TM-U220B \u2014 76 mm, 42 characters (DIP switch 2-1 ON)', paperMm: 76, printMm: 63.4, cols: 42, feed: 3, bold: true},
+    tmu220:   {label: 'Epson TM-U220 / TM-U220II \u2014 76 mm, 33 characters (matches current tickets)', paperMm: 76, printMm: 63.4, cols: 33, feed: 3, bold: true},
+    tmu220_42:{label: 'Epson TM-U220 / TM-U220II \u2014 76 mm, 40 characters (smaller text)', paperMm: 76, printMm: 63.4, cols: 40, feed: 3, bold: true},
     t80:      {label: '80 mm thermal printer (TM-T20, TM-T88, etc.)', paperMm: 80, printMm: 72, cols: 42, feed: 2, bold: false},
     t58:      {label: '58 mm thermal printer', paperMm: 58, printMm: 48, cols: 32, feed: 2, bold: false},
     custom:   {label: 'Custom', paperMm: 76, printMm: 63.4, cols: 40, feed: 3, bold: false}
   };
   var DEF = {
-    preset: 'tmu220', paperMm: 76, printMm: 63.4, cols: 40, sizePct: 100, lineH: 1.3, bold: true, feed: 3, copies: 1,
+    preset: 'tmu220', paperMm: 76, printMm: 63.4, cols: 33, sizePct: 100, lineH: 1.3, bold: true, feed: 3, copies: 1,
     printOnAccept: true, autoPrint: false, autoClose: true, prices: true, method: 'browser', net: [], redAllergy: false,
     header: ['Stratos Pizzeria & Restaurant', '20018 Loyalist Parkway', 'Consecon         ON   KOK1t0'],
     footer: ['We appreciate your comments:', '(613) 394-3000', 'OPEN 5 DAYS A WEEK. SEE YOU AGAIN!']
@@ -1395,7 +1395,7 @@
       + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:12px">'
       + num('pr_paper', 'Paper width (mm)', c.paperMm, 50, 112, 0.5, '')
       + num('pr_printmm', 'Printable width (mm)', c.printMm, 40, 104, 0.1, 'TM-U220B: 63.4')
-      + num('pr_cols', 'Characters per line', c.cols, 28, 56, 1, 'TM-U220B: 40 (or 42)')
+      + num('pr_cols', 'Characters per line', c.cols, 28, 56, 1, '33 = like your current tickets')
       + '</div>');
     var isNet = !!c.useNet;
     var nb = chk('pr_uselocal', c.useLocal, 'USB / Windows printer on this tablet', 'Prints through the Windows print window to the tablet\u2019s default printer (USB, or any printer installed in Windows). With the silent-print shortcut it prints with no window.')
@@ -1521,7 +1521,7 @@
   function clean(s){ return String(s).replace(/[\u2014\u2013\u2018\u2019\u201c\u201d\u2026\u00b7\u00bd\u2009\u00a0]/g, function(c){ return MAP[c]; }).replace(/[^\x20-\x7e]/g, ''); }
   function x(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function buildXml(lines, c, copyNo, copies, p){
-    var font = (p && p.model === 'u220') || (p && p.model === 'thermal') ? 'font_a' : 'font_b';
+    var font = (c.cols || 33) <= 35 || (p && p.model === 'thermal') ? 'font_a' : 'font_b';
     var b = '<epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print"><text lang="en"/><text font="' + font + '"/><text align="left"/>' + (c.bold !== false ? '<text em="true"/>' : '');
     var all = (copies > 1 ? [centerTxt('COPY ' + copyNo + ' OF ' + copies, c.cols || 40)] : []).concat(lines);
     all.forEach(function(l){
@@ -1564,6 +1564,99 @@
     });
   };
   window.__netPrintSend__ = sendOne; window.__netPrintXml__ = buildXml;
+})();
+
+</script>
+<script>
+(function(){
+  var KEY = 'stratos_build_order';
+  var SECS = [['bottom','Bottom','Goes on first'],['middle','Middle',''],['top','Top','Goes on last'],['skip','Not in build order','Prints after the others, in the order the customer picked (e.g. cheeses)']];
+  var DEF = {
+    bottom: ['Mushrooms','White Onions','Red Onions','Green Peppers','Baby Spinach','Fresh Garlic','Tomatoes','Pineapple','Hot Banana Peppers','Green Olives','Kalamata Olives','Dill Pickles'],
+    middle: ['Ham','Grilled Chicken','Gyro Meat','Ground Beef','Sausage','Chorizo','Anchovies','Pepperoni'],
+    top: ['Bacon','Basil','Garlic Aioli'],
+    skip: ['Extra Cheese','Feta','Cheddar','Provolone','Goat Cheese','Parmesan']
+  };
+  function names(){ return (window.__TOPPINGS__ || []).map(function(t){ return t.name; }); }
+  function load(){
+    var c = null; try { c = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch(e) {}
+    var o = {}; SECS.forEach(function(s){ o[s[0]] = ((c && c[s[0]]) || DEF[s[0]]).slice(); });
+    var all = names(), seen = {};
+    SECS.forEach(function(s){ o[s[0]] = o[s[0]].filter(function(n){ if (seen[n] || (all.length && all.indexOf(n) < 0)) return false; seen[n] = 1; return true; }); });
+    all.forEach(function(n){ if (!seen[n]) { (/cheese|feta|cheddar|provolone|parmesan|mozzarella/i.test(n) ? o.skip : o.skip).push(n); seen[n] = 1; } });
+    return o;
+  }
+  function save(o){ try { localStorage.setItem(KEY, JSON.stringify(o)); } catch(e) {} }
+  window.__buildOrder__ = function(){ var o = load(); return o.bottom.concat(o.middle, o.top); };
+
+  var unlocked = false, work = null;
+  function esc(x){ return String(x == null ? '' : x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function toast(msg){ var t = document.createElement('div'); t.textContent = msg; t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:999999;max-width:90vw;text-align:center'; document.body.appendChild(t); setTimeout(function(){ t.remove(); }, 2400); }
+  var BTN = 'class="bg-primary text-primary-foreground" style="border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer"';
+  var BTN2 = 'class="border border-border text-foreground" style="background:transparent;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer"';
+  var SQ = 'class="border border-border text-foreground" style="background:transparent;border-radius:6px;width:34px;height:34px;font-size:15px;line-height:1;cursor:pointer;flex-shrink:0"';
+  function render(root){
+    var h = '<div style="padding:20px;max-width:1100px"><h1 class="font-serif text-2xl" style="margin:0 0 4px">Pizza Build Order</h1>'
+      + '<p class="text-muted-foreground" style="margin:0 0 16px;font-size:13px">Sets the order toppings print on the prep ticket \u2014 bottom layer first. Applies to every pizza, including specialty pizzas.</p>';
+    if (!unlocked) {
+      var cur = load(), li = function(k){ return cur[k].length ? cur[k].map(esc).join(', ') : '<i>none</i>'; };
+      h += '<div class="bg-card border border-border rounded-xl" style="padding:14px 16px;margin-bottom:16px"><p style="margin:0 0 8px;font-size:14px;font-weight:700">Locked</p><p class="text-muted-foreground" style="margin:0 0 10px;font-size:12px">Manager or owner PIN required to make changes</p>'
+        + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input id="bo_pin" type="password" inputmode="numeric" maxlength="8" placeholder="\u2022\u2022\u2022\u2022" class="bg-background text-foreground border border-border" style="width:110px;border-radius:6px;padding:7px 9px;font-size:14px"><button id="bo_unlock" ' + BTN + '>Unlock</button><span id="bo_err" style="display:none;color:#dc2626;font-size:12px"></span></div></div>';
+      SECS.forEach(function(s){ h += '<p style="font-size:13px;margin:0 0 8px"><b>' + s[1] + ':</b> ' + li(s[0]) + '</p>'; });
+      root.innerHTML = h + '</div>';
+      var go = function(){ var r = window.__checkMgrPin__(root.querySelector('#bo_pin').value); if (r.ok) { unlocked = true; work = load(); render(root); } else { var er = root.querySelector('#bo_err'); er.textContent = r.employee ? 'Manager or owner PIN needed' : 'Incorrect PIN'; er.style.display = 'inline'; root.querySelector('#bo_pin').value = ''; } };
+      root.querySelector('#bo_unlock').onclick = go; root.querySelector('#bo_pin').onkeydown = function(e){ if (e.key === 'Enter') go(); };
+      return;
+    }
+    h += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px"><button id="bo_save" ' + BTN + ' style="padding:10px 18px;font-size:14px">Save Build Order</button><button id="bo_reset" ' + BTN2 + '>Reset to Default</button><button id="bo_lock" style="background:none;border:none;color:#b45309;text-decoration:underline;font-size:12px;cursor:pointer">Lock</button></div>';
+    h += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:start">';
+    var n = 0;
+    SECS.forEach(function(s){
+      var list = work[s[0]];
+      h += '<div class="bg-card border border-border rounded-xl" style="overflow:hidden" data-drop="' + s[0] + '"><div class="border-b border-border bg-muted/30" style="padding:10px 14px"><p style="margin:0;font-size:14px;font-weight:700">' + s[1] + ' <span class="text-muted-foreground" style="font-weight:500">(' + list.length + ')</span></p>' + (s[2] ? '<p class="text-muted-foreground" style="margin:2px 0 0;font-size:11px">' + s[2] + '</p>' : '') + '</div><div style="padding:8px 10px;min-height:44px">';
+      if (!list.length) h += '<p class="text-muted-foreground" style="font-size:12px;margin:6px 4px">Empty \u2014 move toppings here</p>';
+      list.forEach(function(name, i){
+        var num = s[0] === 'skip' ? '\u2013' : String(++n);
+        h += '<div draggable="true" data-item="' + esc(name) + '" data-sec="' + s[0] + '" data-i="' + i + '" class="border border-border" style="display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:8px;margin-bottom:6px;background:rgba(128,128,128,.04)">'
+          + '<span class="text-muted-foreground" style="width:22px;text-align:right;font-size:12px;flex-shrink:0">' + num + '</span>'
+          + '<span style="flex:1;font-size:14px;font-weight:600;min-width:0;line-height:1.2;overflow-wrap:anywhere">' + esc(name) + '</span>'
+          + '<button type="button" data-mv="up" ' + SQ + (i === 0 ? ' disabled' : '') + ' aria-label="Move up">\u25b2</button>'
+          + '<button type="button" data-mv="down" ' + SQ + (i === list.length - 1 ? ' disabled' : '') + ' aria-label="Move down">\u25bc</button>'
+          + '<select data-mv="sec" class="bg-background text-foreground border border-border" style="border-radius:6px;padding:6px 4px;font-size:12px;flex-shrink:0;width:92px">' + SECS.map(function(o){ return '<option value="' + o[0] + '"' + (o[0] === s[0] ? ' selected' : '') + '>' + (o[0] === 'skip' ? 'Not sorted' : o[1]) + '</option>'; }).join('') + '</select>'
+          + '</div>';
+      });
+      h += '</div></div>';
+    });
+    h += '</div>';
+    // preview
+    var pv = work.bottom.concat(work.middle, work.top);
+    h += '<div class="bg-card border border-border rounded-xl" style="margin-top:16px;padding:14px 16px"><p style="margin:0 0 8px;font-size:14px;font-weight:700">Ticket preview \u2014 Large pizza with everything</p><pre style="margin:0;font-family:\'Courier New\',Courier,monospace;font-size:13px;line-height:1.35;white-space:pre-wrap">1  Large Build Your Own Pizza\n'
+      + pv.concat(work.skip).map(function(x){ return '    Add ' + esc(x); }).join('\n') + '</pre></div>';
+    root.innerHTML = h + '</div>';
+    function move(sec, i, to, toSec){
+      var item = work[sec].splice(i, 1)[0];
+      if (toSec) work[toSec].push(item); else work[sec].splice(to, 0, item);
+      render(root);
+    }
+    root.querySelectorAll('[data-item]').forEach(function(r){
+      var sec = r.getAttribute('data-sec'), i = +r.getAttribute('data-i');
+      r.querySelector('[data-mv=up]').onclick = function(){ move(sec, i, i - 1); };
+      r.querySelector('[data-mv=down]').onclick = function(){ move(sec, i, i + 1); };
+      r.querySelector('[data-mv=sec]').onchange = function(){ if (this.value !== sec) move(sec, i, 0, this.value); };
+      r.ondragstart = function(e){ e.dataTransfer.setData('text/plain', sec + '|' + i); r.style.opacity = '.4'; };
+      r.ondragend = function(){ r.style.opacity = ''; };
+      r.ondragover = function(e){ e.preventDefault(); };
+      r.ondrop = function(e){ e.preventDefault(); e.stopPropagation(); var d = (e.dataTransfer.getData('text/plain') || '').split('|'); if (d.length < 2) return; var fs = d[0], fi = +d[1]; var item = work[fs].splice(fi, 1)[0]; var ti = i; if (fs === sec && fi < i) ti = i - 1; work[sec].splice(ti, 0, item); render(root); };
+    });
+    root.querySelectorAll('[data-drop]').forEach(function(c){
+      c.ondragover = function(e){ e.preventDefault(); };
+      c.ondrop = function(e){ e.preventDefault(); var d = (e.dataTransfer.getData('text/plain') || '').split('|'); if (d.length < 2) return; var item = work[d[0]].splice(+d[1], 1)[0]; work[c.getAttribute('data-drop')].push(item); render(root); };
+    });
+    root.querySelector('#bo_save').onclick = function(){ save(work); toast('Build order saved'); };
+    root.querySelector('#bo_reset').onclick = function(){ if (!confirm('Reset the build order to the default?')) return; localStorage.removeItem(KEY); work = load(); render(root); toast('Reset to default \u2014 tap Save to keep it'); };
+    root.querySelector('#bo_lock').onclick = function(){ unlocked = false; work = null; render(root); };
+  }
+  window.__renderBuildAdmin__ = function(root){ unlocked = false; work = null; render(root); };
 })();
 
 </script>
