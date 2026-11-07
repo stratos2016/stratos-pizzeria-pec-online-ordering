@@ -925,14 +925,17 @@
 </script>
 <script>
 (function(){
-  var MASTER = '2016';
+  var MKEY = 'stratos_master_pin';
   function cyrb53(str, seed){ var h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed; for (var i = 0, ch; i < str.length; i++) { ch = str.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); } h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909); h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909); return (h2 >>> 0).toString(16).padStart(8,'0') + (h1 >>> 0).toString(16).padStart(8,'0'); }
   window.__pinHash__ = function(pin){ var s = 'stratos-staff:' + String(pin); return cyrb53(s, 7) + cyrb53(s, 2016); };
+  window.__isMasterPin__ = function(pin){ pin = String(pin || '').trim(); if (!pin) return false; var st = null; try { st = localStorage.getItem(MKEY); } catch(e) {} return st ? window.__pinHash__('master:' + pin) === st : pin === '2016'; };
+  window.__setMasterPin__ = function(pin){ try { localStorage.setItem(MKEY, window.__pinHash__('master:' + String(pin).trim())); localStorage.setItem(MKEY + '_at', new Date().toISOString()); return true; } catch(e) { return false; } };
+  window.__masterPinChangedAt__ = function(){ try { return localStorage.getItem(MKEY + '_at'); } catch(e) { return null; } };
   window.__staffList__ = function(){ try { return JSON.parse(localStorage.getItem('stratos_staff') || '[]'); } catch(e) { return []; } };
   // Returns {ok, role, name, employee}
   window.__checkMgrPin__ = function(pin){
     pin = String(pin || '').trim(); if (!pin) return {ok:false};
-    if (pin === MASTER) return {ok:true, role:'Owner', name:'Owner (master PIN)', master:true};
+    if (window.__isMasterPin__(pin)) return {ok:true, role:'Owner', name:'Owner (master PIN)', master:true};
     var hsh = window.__pinHash__(pin);
     var x = window.__staffList__().find(function(s){ return s.pinHash === hsh && s.active !== false; });
     if (!x) return {ok:false};
@@ -1024,7 +1027,7 @@
     var bg = dark ? '#1a1a1a' : '#fff', fg = dark ? '#f5f5f5' : '#111827', mu = dark ? '#9ca3af' : '#6b7280', bd = dark ? '#333' : '#e5e7eb';
     var d = document.createElement('div');
     d.innerHTML = '<div id="st_op" style="position:fixed;inset:0;z-index:1000000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;font-family:Inter,system-ui,sans-serif"><div style="background:' + bg + ';color:' + fg + ';border-radius:14px;padding:20px;width:100%;max-width:340px">'
-      + '<p style="margin:0 0 4px;font-size:17px;font-weight:700">' + (mode === 'any' ? 'Manager or owner PIN required' : 'Owner PIN required') + '</p><p style="margin:0 0 14px;font-size:13px;color:' + mu + '">' + (mode === 'any' ? 'A manager or owner PIN unlocks Manager. The owner PIN (2016) unlocks Owner too.' : 'Enter the owner PIN to unlock the Owner option' + (who ? ' for ' + esc(who) : '') + '.') + '</p>'
+      + '<p style="margin:0 0 4px;font-size:17px;font-weight:700">' + (mode === 'any' ? 'Manager or owner PIN required' : 'Owner PIN required') + '</p><p style="margin:0 0 14px;font-size:13px;color:' + mu + '">' + (mode === 'any' ? 'A manager or owner PIN unlocks Manager. The master owner PIN unlocks Owner too.' : 'Enter the owner PIN to unlock the Owner option' + (who ? ' for ' + esc(who) : '') + '.') + '</p>'
       + '<input id="st_op_pin" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="\u2022\u2022\u2022\u2022" style="display:block;width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid ' + bd + ';border-radius:8px;background:transparent;color:' + fg + ';font-size:16px;letter-spacing:4px">'
       + '<p id="st_op_err" style="display:none;margin:6px 0 0;color:#dc2626;font-size:12px">Incorrect PIN</p>'
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px"><button id="st_op_cancel" style="padding:10px;border-radius:8px;border:1px solid ' + bd + ';background:transparent;color:' + fg + ';font-size:14px;font-weight:600;cursor:pointer">Cancel</button><button id="st_op_ok" style="padding:10px;border-radius:8px;border:none;background:#0d1b34;color:#fff;font-size:14px;font-weight:600;cursor:pointer">Confirm</button></div></div></div>';
@@ -1032,7 +1035,7 @@
     var inp = m.querySelector('#st_op_pin'); setTimeout(function(){ inp.focus(); }, 50);
     var done = false;
     function close(ok){ if (done) return; done = true; m.remove(); cb(ok); }
-    function go(){ var v = inp.value.trim(); if (v === PIN) close('owner'); else if (mode === 'any' && window.__checkMgrPin__(v).ok) close('manager'); else { m.querySelector('#st_op_err').style.display = 'block'; inp.value = ''; inp.focus(); } }
+    function go(){ var v = inp.value.trim(); if (window.__isMasterPin__(v)) close('owner'); else if (mode === 'any' && window.__checkMgrPin__(v).ok) close('manager'); else { m.querySelector('#st_op_err').style.display = 'block'; inp.value = ''; inp.focus(); } }
     m.querySelector('#st_op_ok').onclick = go; m.querySelector('#st_op_cancel').onclick = function(){ close(false); };
     inp.onkeydown = function(e){ if (e.key === 'Enter') go(); };
     m.onclick = function(e){ if (e.target === m) close(false); };
@@ -1098,7 +1101,19 @@
         mb += '</div>';
       });
     }
-    h += card('Staff List', 'Managers & owners only \u00b7 saved on this device', mb) + '</div>';
+    h += card('Staff List', 'Managers & owners only \u00b7 saved on this device', mb);
+    if (unlocked && me && me.role === 'Owner') {
+      var ca = window.__masterPinChangedAt__ && window.__masterPinChangedAt__();
+      var PI = 'type="password" inputmode="numeric" maxlength="8" autocomplete="off" class="bg-background text-foreground border border-border" style="display:block;width:100%;box-sizing:border-box;border-radius:6px;padding:8px 10px;font-size:14px;margin-top:4px;letter-spacing:3px"';
+      h += card('Master Owner PIN', 'Owners only \u00b7 ' + (ca ? 'last changed ' + new Date(ca).toLocaleDateString() : 'still the original PIN'),
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">'
+        + '<div><label style="font-size:12px;font-weight:600">Current master PIN</label><input id="mp_cur" ' + PI + '></div>'
+        + '<div><label style="font-size:12px;font-weight:600">New PIN (4\u20138 digits)</label><input id="mp_new" ' + PI + '></div>'
+        + '<div><label style="font-size:12px;font-weight:600">Confirm new PIN</label><input id="mp_new2" ' + PI + '></div></div>'
+        + '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px"><button id="mp_save" ' + BTN.replace('padding:10px 16px;font-size:14px','padding:8px 14px;font-size:13px') + '>Change Master PIN</button><span id="mp_err" style="display:none;color:#dc2626;font-size:12px"></span></div>'
+        + '<p class="text-muted-foreground" style="font-size:11px;margin:10px 0 0">Forgot it? An Owner\u2019s own staff PIN also works in \u201cCurrent master PIN\u201d. Saved on this device only \u2014 change it on each tablet/computer you use.</p>');
+    }
+    h += '</div>';
     root.innerHTML = h;
     wire(root);
   }
@@ -1116,7 +1131,7 @@
       if (pin || pin2) {
         if (!/^\d{4,6}$/.test(pin)) { toast('PIN must be 4 to 6 digits'); return; }
         if (pin !== pin2) { toast('PINs don\u2019t match'); return; }
-        if (pin === PIN) { toast('That PIN is reserved \u2014 choose another'); return; }
+        if (window.__isMasterPin__(pin)) { toast('That PIN is reserved \u2014 choose another'); return; }
         if (/^(\d)\1+$/.test(pin) || '0123456789'.indexOf(pin) >= 0) { toast('PIN too easy to guess \u2014 choose another'); return; }
       }
       (pin ? sha(pin) : Promise.resolve(null)).then(function(ph){
@@ -1145,6 +1160,18 @@
       $('st_unlock').onclick = go; $('st_pin').onkeydown = function(e){ if (e.key === 'Enter') go(); };
     }
     if (!unlocked) return;
+    if ($('mp_save')) $('mp_save').onclick = function(){
+      var er = $('mp_err'), cur = $('mp_cur').value.trim(), np = $('mp_new').value.trim(), np2 = $('mp_new2').value.trim();
+      var fail = function(m){ er.textContent = m; er.style.display = 'inline'; };
+      var c = window.__checkMgrPin__(cur);
+      if (!(window.__isMasterPin__(cur) || (c.ok && c.role === 'Owner'))) return fail('Current PIN is wrong');
+      if (!/^\d{4,8}$/.test(np)) return fail('New PIN must be 4 to 8 digits');
+      if (np !== np2) return fail('New PINs don\u2019t match');
+      if (/^(\d)\1+$/.test(np) || '0123456789'.indexOf(np) >= 0 || '9876543210'.indexOf(np) >= 0 || np === '2016') return fail('Too easy to guess \u2014 pick another');
+      var ph = window.__pinHash__(np);
+      if (window.__staffList__().some(function(y){ return y.pinHash === ph; })) return fail('A staff member already uses that PIN');
+      window.__setMasterPin__(np); toast('Master PIN changed \u2014 2016 no longer works on this device'); rr();
+    };
     $('st_lock').onclick = function(){ unlocked = false; me = null; ownerOk = false; formLvl = ''; editingId = null; selfEdit = false; openId = null; rr(); };
     $('st_q').oninput = function(e){ q = e.target.value; var pos = e.target.selectionStart; setTimeout(function(){ render(root); var n = root.querySelector('#st_q'); if (n) { n.focus(); try { n.setSelectionRange(pos,pos); } catch(x) {} } }, 0); };
     root.querySelectorAll('[data-open]').forEach(function(b){ b.onclick = function(){ var id = b.getAttribute('data-open'); openId = openId === id ? null : id; rr(); }; });
@@ -1378,7 +1405,7 @@
     var c = load();
     var h = '<div style="padding:20px;max-width:900px"><h1 class="font-serif text-2xl" style="margin:0 0 4px">Printer Setup</h1>'
       + '<p class="text-muted-foreground" style="margin:0 0 16px;font-size:13px">Prep ticket layout and printing for <b>this device</b>. Each computer or tablet keeps its own printer settings.</p>';
-    var testBtn = '<button id="pr_test" ' + BTN + '>Print Test Ticket</button>';
+    var testBtn = '<button id="pr_build" ' + BTN + '>Build a Test Order</button> <button id="pr_test" ' + BTN2 + '>Quick Sample Ticket</button>';
     if (!unlocked) {
       h += card('Locked', 'Manager or owner PIN required to change printer settings',
         '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input id="pr_pin" type="password" inputmode="numeric" maxlength="8" placeholder="\u2022\u2022\u2022\u2022" class="bg-background text-foreground border border-border" style="width:110px;border-radius:6px;padding:7px 9px;font-size:14px"><button id="pr_unlock" ' + BTN + '>Unlock</button><span id="pr_err" style="display:none;color:#dc2626;font-size:12px"></span></div>'
@@ -1386,7 +1413,8 @@
       root.innerHTML = h + '</div>';
       var go = function(){ var r = window.__checkMgrPin__(root.querySelector('#pr_pin').value); if (r.ok) { unlocked = true; render(root); } else { var er = root.querySelector('#pr_err'); er.textContent = r.employee ? 'Manager or owner PIN needed' : 'Incorrect PIN'; er.style.display = 'inline'; root.querySelector('#pr_pin').value = ''; } };
       root.querySelector('#pr_unlock').onclick = go; root.querySelector('#pr_pin').onkeydown = function(e){ if (e.key === 'Enter') go(); };
-      root.querySelector('#pr_test').onclick = function(){ window.__printTicket__ && window.__printTicket__(sample()); };
+      root.querySelector('#pr_test').onclick = function(){ window.__printTicket__ && window.__printTicket__(Object.assign(sample(), {__preview: 1})); };
+      root.querySelector('#pr_build').onclick = function(){ window.__openTicketTester__(); };
       return;
     }
     var opts = Object.keys(PRESETS).map(function(k){ return '<option value="' + k + '"' + (c.preset === k ? ' selected' : '') + '>' + esc(PRESETS[k].label) + '</option>'; }).join('');
@@ -1503,12 +1531,23 @@
     ['pr_paper','pr_printmm','pr_cols'].forEach(function(id){ $(id).oninput = function(){ $('pr_preset').value = 'custom'; }; });
     root.querySelectorAll('input[type=number]').forEach(function(x){ x.onfocus = function(){ setTimeout(function(){ x.select(); }, 0); }; });
     $('pr_save').onclick = function(){ save(collect()); toast('Printer settings saved'); render(root); };
-    $('pr_test').onclick = function(){ var keep = localStorage.getItem(KEY); save(collect()); window.__printTicket__ && window.__printTicket__(sample()); if (keep == null) localStorage.removeItem(KEY); else localStorage.setItem(KEY, keep); };
+    $('pr_build').onclick = function(){ window.__openTicketTester__(); };
+    $('pr_test').onclick = function(){ var keep = localStorage.getItem(KEY); save(collect()); window.__printTicket__ && window.__printTicket__(Object.assign(sample(), {__preview: 1})); if (keep == null) localStorage.removeItem(KEY); else localStorage.setItem(KEY, keep); };
     $('pr_reset').onclick = function(){ if (!confirm('Reset printer settings to default (Epson TM-U220B)?')) return; localStorage.removeItem(KEY); render(root); toast('Printer settings reset'); };
     $('pr_lock').onclick = function(){ unlocked = false; render(root); };
     $('pr_copy').onclick = function(){ var ta = $('pr_target'); ta.select(); var ok = false; try { ok = document.execCommand('copy'); } catch(e) {} if (navigator.clipboard) navigator.clipboard.writeText(ta.value).then(function(){ toast('Copied'); }, function(){ if (!ok) toast('Select the text and copy it'); }); else toast(ok ? 'Copied' : 'Select the text and copy it'); };
   }
   window.__renderPrinterAdmin__ = function(root){ unlocked = false; render(root); };
+  window.__showTestTicket__ = function(o){ window.__printTicket__ && window.__printTicket__(Object.assign({}, o, {__preview: 1})); };
+  window.__openTicketTester__ = function(){
+    var old = document.getElementById('__ticket_tester__'); if (old) old.remove();
+    var d = document.createElement('div'); d.id = '__ticket_tester__';
+    d.style.cssText = 'position:fixed;inset:0;z-index:99990;background:#f5f3ee;display:flex;flex-direction:column';
+    d.innerHTML = '<div style="background:#0d1b34;color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px;font-family:Inter,system-ui,sans-serif"><b style="flex:1;font-size:14px">Test Order Builder \u2014 order like a customer, then Checkout \u2192 Preview Prep Ticket</b><button id="__tt_close" style="padding:6px 14px;border:none;border-radius:6px;background:#c09b6d;color:#fff;font-weight:600;cursor:pointer">\u2715 Close</button></div>'
+      + '<iframe src="index-customer.html?testticket=1" style="flex:1;border:0;width:100%;background:#fff" title="Test order builder"></iframe>';
+    document.body.appendChild(d);
+    d.querySelector('#__tt_close').onclick = function(){ d.remove(); var ov = document.getElementById('__print_overlay__'); if (ov) ov.remove(); };
+  };
 })();
 
 </script>
