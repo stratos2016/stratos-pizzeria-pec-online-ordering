@@ -80,13 +80,16 @@ import{c as P,w as ws,r as o,x as Ss,j as e,a as O,d as js,q as W,u as xe,n as q
         const adds=tops.filter(o=>{ const nm=topOf(o.p[0]); return !(preset.includes(nm)&&!o.p[1]&&o.p[0]===nm); });
         pairs=[["Add WORKS",0]].concat(oth,noL,adds.map(o=>["Add "+short(o.p[0]),o.p[1]]));
       } else pairs=oth.concat(tops.map(o=>[ "Add "+short(o.p[0]), o.p[1] ])); }
-    let itemName=sizePfx+(item.name||"");
+    let protein="", sides=[];
+    pairs=pairs.filter(p=>{ const pm=String(p[0]).match(/^Protein:\s*(.+)$/i); if(pm){ protein=pm[1].trim(); return false; } if(/Souvlaki/i.test(item.name||"")&&/^(Chicken|Pork)$/i.test(String(p[0]))&&!protein){ protein=String(p[0]); return false; }
+      const sm=String(p[0]).match(/^Add (Fries|Onion Rings|Poutine)$/i); if(sm){ sides.push([sm[1],p[1]]); return false; } return true; });
+    let itemName=sizePfx+(protein?protein+" ":"")+(item.name||"");
     { const mm=(item.name||"").match(/^(.*?)\s*\((Sm|Small|Lg|Large|Med|Medium)\)$/i); if(!sizePfx&&mm){ const z=mm[2].toLowerCase(); itemName=(z.startsWith("s")?"Sml":z.startsWith("l")?"Lrg":"Medium")+" "+mm[1]; } }
     itemName=itemName.replace(/Strato's /,"");
     if(sizePfx&&itemName.length>W-12&&/ Pizza$/.test(itemName)) itemName=itemName.replace(/ Pizza$/,"");
     const qty=item.quantity||1;
     const unit=+item.price||0;
-    const extras=mp?pairs.reduce((a,p)=>a+p[1],0):0;
+    const extras=mp?pairs.concat(sides).reduce((a,p)=>a+p[1],0):0;
     const base=Math.max(0,Math.round((unit-extras)*100)/100);
     const qtyStr=pad(String(qty),2);
     const fit=(s,w)=>{s=String(s);return s.length>w?s.slice(0,w):s;};
@@ -94,11 +97,13 @@ import{c as P,w as ws,r as o,x as Ss,j as e,a as O,d as js,q as W,u as xe,n as q
       while(r.length>nw){ let k=r.lastIndexOf(" ",nw); if(k<=0) k=nw; out.push(r.slice(0,k)); r=r.slice(k).trim(); } out.push(r);
       out.forEach((seg,ix)=>{ const pp=ix===0?pfx:" ".repeat(pfx.length<4?pfx.length:pfx.length+2); lines.push((pp+(ix===0&&price?pad(seg,nw)+" "+padL(price,8):seg)).replace(/\s+$/,"")); }); };
     row(qtyStr+" ",itemName,money(base*qty));
+    const sideRows=()=>sides.forEach(sd=>row(qtyStr+" ",sd[0],money(sd[1]*qty)));
     pairs.forEach(p=>{
       const mod=p[0]; if(!mod) return;
       const pr=p[1]*qty;
       row("    ",mod,pr>0||/^Add /.test(mod)?money(pr):"");
     });
+    sideRows();
   });
 
   lines.push("");
